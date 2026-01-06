@@ -14,11 +14,13 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
   // -A = attach if session exists, create if not
   // -s = session name
   // -c = working directory
+  // -e = set environment variable (so Claude hooks can identify this session)
   const shell = pty.spawn('tmux', [
     'new-session',
     '-A',
     '-s', sessionName,
     '-c', cwd,
+    '-e', `CLAUDE_TMUX_SESSION=${sessionName}`,
   ], {
     name: 'xterm-256color',
     cols: 120,

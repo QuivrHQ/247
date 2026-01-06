@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Terminal } from '@/components/Terminal';
 
 interface Machine {
@@ -14,15 +14,27 @@ interface Machine {
   };
 }
 
+interface SessionInfo {
+  name: string;
+  project: string;
+  createdAt: number;
+  status: string;
+}
+
 export default function TerminalPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const machineId = params.machineId as string;
+
+  // Get project and session from URL params (set by home page)
+  const urlProject = searchParams.get('project');
+  const urlSession = searchParams.get('session');
 
   const [machine, setMachine] = useState<Machine | null>(null);
   const [projects, setProjects] = useState<string[]>([]);
-  const [sessions, setSessions] = useState<string[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>('');
-  const [selectedSession, setSelectedSession] = useState<string>('');
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>(urlProject || '');
+  const [selectedSession, setSelectedSession] = useState<string>(urlSession || '');
   const [loading, setLoading] = useState(true);
 
   // Default to localhost for v0 testing
@@ -31,9 +43,15 @@ export default function TerminalPage() {
   useEffect(() => {
     fetch(`/api/machines/${machineId}`)
       .then((r) => r.json())
-      .then(setMachine)
+      .then((data) => {
+        setMachine(data);
+        // If no URL project, default to first available
+        if (!urlProject && data.config?.projects?.length > 0) {
+          setSelectedProject(data.config.projects[0]);
+        }
+      })
       .finally(() => setLoading(false));
-  }, [machineId]);
+  }, [machineId, urlProject]);
 
   useEffect(() => {
     if (!machine) return;
@@ -46,16 +64,18 @@ export default function TerminalPage() {
       .then((r) => r.json())
       .then((p: string[]) => {
         setProjects(p);
-        if (p.length > 0) setSelectedProject(p[0]);
+        if (!selectedProject && p.length > 0) {
+          setSelectedProject(p[0]);
+        }
       })
       .catch(console.error);
 
     // Fetch active tmux sessions
     fetch(`${protocol}://${url}/api/sessions`)
       .then((r) => r.json())
-      .then((s: string[]) => setSessions(s))
+      .then((s: SessionInfo[]) => setSessions(s))
       .catch(() => setSessions([]));
-  }, [machine]);
+  }, [machine, selectedProject]);
 
   if (loading) {
     return (
@@ -106,8 +126,8 @@ export default function TerminalPage() {
             >
               <option value="">New session</option>
               {sessions.map((s) => (
-                <option key={s} value={s}>
-                  Reconnect: {s}
+                <option key={s.name} value={s.name}>
+                  {s.project} ({s.status})
                 </option>
               ))}
             </select>
@@ -119,7 +139,7 @@ export default function TerminalPage() {
         <Terminal
           agentUrl={agentUrl}
           project={selectedProject}
-          sessionName={selectedSession || `${selectedProject}-${Date.now()}`}
+          sessionName={selectedSession || undefined}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 {
-  "name": "remote-notify",
+  "name": "claude-remote-status",
   "version": "1.0.0",
-  "description": "Notify remote control dashboard when Claude stops"
+  "description": "Status tracking for Claude Remote Control dashboard"
 }

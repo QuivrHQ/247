@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Monitor,
@@ -36,6 +37,7 @@ interface SelectedSession {
   machineId: string;
   sessionName: string;
   project: string;
+  environmentId?: string;
 }
 
 type ViewTab = 'environments' | 'guide';
@@ -43,6 +45,8 @@ type ViewTab = 'environments' | 'guide';
 const DEFAULT_MACHINE_ID = 'local-agent';
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { setMachines: setPollingMachines, getAllSessions } = useSessionPolling();
   const [agentConnection, setAgentConnection] = useState<ReturnType<typeof loadAgentConnection>>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +57,9 @@ export default function Home() {
   // Selected session for split view
   const [selectedSession, setSelectedSession] = useState<SelectedSession | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Track if we've already restored from URL to avoid loops
+  const hasRestoredFromUrl = useRef(false);
 
   // Load agent connection from localStorage
   useEffect(() => {
@@ -78,6 +85,29 @@ export default function Home() {
     setLoading(false);
   }, [setPollingMachines]);
 
+  // Restore session from URL on load
+  const allSessions = getAllSessions();
+  useEffect(() => {
+    if (hasRestoredFromUrl.current) return;
+
+    const sessionParam = searchParams.get('session');
+    const machineParam = searchParams.get('machine') || DEFAULT_MACHINE_ID;
+
+    if (sessionParam && allSessions.length > 0) {
+      const session = allSessions.find(
+        s => s.name === sessionParam && s.machineId === machineParam
+      );
+      if (session) {
+        setSelectedSession({
+          machineId: machineParam,
+          sessionName: sessionParam,
+          project: session.project,
+        });
+        hasRestoredFromUrl.current = true;
+      }
+    }
+  }, [searchParams, allSessions]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -95,6 +125,12 @@ export default function Home() {
       if (e.key === 'Escape' && selectedSession && !isFullscreen) {
         e.preventDefault();
         setSelectedSession(null);
+        // Clear URL params
+        const params = new URLSearchParams(window.location.search);
+        params.delete('session');
+        params.delete('machine');
+        const newUrl = params.toString() ? `?${params.toString()}` : '/';
+        window.history.replaceState({}, '', newUrl);
       }
 
       // ⌘F to toggle fullscreen when session is selected
@@ -108,12 +144,27 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [agentConnection, selectedSession, isFullscreen]);
 
+  // Helper to clear session from URL
+  const clearSessionFromUrl = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('session');
+    params.delete('machine');
+    const newUrl = params.toString() ? `?${params.toString()}` : '/';
+    router.replace(newUrl, { scroll: false });
+  }, [searchParams, router]);
+
   // Select session handler
   const handleSelectSession = useCallback(
     (machineId: string, sessionName: string, project: string) => {
       setSelectedSession({ machineId, sessionName, project });
+
+      // Sync to URL
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('session', sessionName);
+      params.set('machine', machineId);
+      router.replace(`?${params.toString()}`, { scroll: false });
     },
-    []
+    [searchParams, router]
   );
 
   // Start new session
@@ -124,26 +175,38 @@ export default function Home() {
       setSelectedSession({
         machineId,
         sessionName: newSessionName,
-        project
+        project,
+        environmentId,
       });
       setNewSessionOpen(false);
+
+      // Sync to URL (will be updated to actual name by handleSessionCreated)
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('session', newSessionName);
+      params.set('machine', machineId);
+      router.replace(`?${params.toString()}`, { scroll: false });
     },
-    []
+    [searchParams, router]
   );
 
   // Handle session created (update name from --new to actual)
   const handleSessionCreated = useCallback((actualSessionName: string) => {
     if (selectedSession) {
       setSelectedSession(prev => prev ? { ...prev, sessionName: actualSessionName } : null);
+      // Update URL with actual session name
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('session', actualSessionName);
+      router.replace(`?${params.toString()}`, { scroll: false });
     }
-  }, [selectedSession]);
+  }, [selectedSession, searchParams, router]);
 
   // Handle session killed
   const handleSessionKilled = useCallback((machineId: string, sessionName: string) => {
     if (selectedSession?.sessionName === sessionName) {
       setSelectedSession(null);
+      clearSessionFromUrl();
     }
-  }, [selectedSession]);
+  }, [selectedSession, clearSessionFromUrl]);
 
   // Connection saved handler
   const handleConnectionSaved = useCallback((connection: ReturnType<typeof saveAgentConnection>) => {
@@ -161,7 +224,6 @@ export default function Home() {
   }, [setPollingMachines]);
 
   // Stats
-  const allSessions = getAllSessions();
   const needsAttention = allSessions.filter(
     (s) => s.status === 'needs_attention'
   ).length;
@@ -393,7 +455,11 @@ export default function Home() {
               project={selectedSession.project}
               agentUrl={getAgentUrl()}
               sessionInfo={getSelectedSessionInfo()}
-              onBack={() => setSelectedSession(null)}
+              environmentId={selectedSession.environmentId}
+              onBack={() => {
+                setSelectedSession(null);
+                clearSessionFromUrl();
+              }}
               onSessionCreated={handleSessionCreated}
             />
           ) : (

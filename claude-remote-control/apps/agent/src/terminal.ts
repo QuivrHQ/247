@@ -90,19 +90,24 @@ export function createTerminal(
       // This is critical for hooks to identify which session they belong to
       const baseExport = `export CLAUDE_TMUX_SESSION="${sessionName}"`;
 
-      // Add custom environment variables if present
-      const allExports = Object.keys(customEnvVars).length > 0
-        ? `${baseExport}; ${Object.entries(customEnvVars)
+      // Add custom environment variables if present (filter out empty values)
+      const nonEmptyVars = Object.entries(customEnvVars).filter(([, value]) => value && value.trim() !== '');
+      const allExports = nonEmptyVars.length > 0
+        ? `${baseExport}; ${nonEmptyVars
             .map(([key, value]) => `export ${key}="${value.replace(/"/g, '\\"')}"`)
             .join('; ')}`
         : baseExport;
 
-      console.log(`[Terminal] Injecting CLAUDE_TMUX_SESSION and ${Object.keys(customEnvVars).length} custom vars into session '${sessionName}'`);
-      exec(`tmux send-keys -t "${sessionName}" "${allExports}" C-m`);
+      console.log(`[Terminal] Injecting CLAUDE_TMUX_SESSION and ${nonEmptyVars.length} custom vars into NEW session '${sessionName}'`);
+      // Séquences ANSI pour effacer les lignes après exécution
+      // \033[1A = remonter d'une ligne, \033[2K = effacer la ligne
+      // On efface 2 lignes: la commande tapée + le prompt précédent
+      const clearSequence = `printf '\\033[1A\\033[2K\\033[1A\\033[2K'`;
+      exec(`tmux send-keys -t "${sessionName}" "${allExports}; ${clearSequence}" C-m`);
     }, 100);
   } else {
     // For existing sessions, just ensure mouse is enabled
-    // CLAUDE_TMUX_SESSION was already injected when the session was created
+    // Environment variables were already injected when the session was created
     setTimeout(() => {
       exec(`tmux set-option -t "${sessionName}" mouse on`);
     }, 100);

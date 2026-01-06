@@ -199,5 +199,22 @@ describe('Terminal', () => {
       terminal.kill();
       expect(mockPtyProcess.kill).toHaveBeenCalled();
     });
+
+    it('injects env vars with ANSI clear sequence for new sessions', async () => {
+      const { exec } = await import('child_process');
+      execSyncResponses['has-session'] = new Error('not found');
+
+      vi.resetModules();
+      const { createTerminal } = await import('../../src/terminal.js');
+      createTerminal('/tmp/test', 'ansi-test', { MY_VAR: 'value' });
+
+      // Wait for setTimeout to fire
+      await new Promise((r) => setTimeout(r, 150));
+
+      // Verify exec was called with the clear sequence
+      expect(exec).toHaveBeenCalledWith(
+        expect.stringMatching(/send-keys.*export.*printf.*\\033\[1A.*\\033\[2K/)
+      );
+    });
   });
 });

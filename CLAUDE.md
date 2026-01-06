@@ -69,6 +69,10 @@ pnpm db:studio        # Open Drizzle Studio UI
 | `packages/shared` | TypeScript types shared between web and agent |
 | `packages/hooks` | Claude Code plugin for stop notifications |
 
+## Important Rules
+
+- **Always use a local database** - Never use cloud/remote databases (Neon, Supabase, PlanetScale, etc.). Prefer SQLite or other local solutions managed by the agent for all persistence needs.
+
 ## Key Technical Decisions
 
 - **pnpm workspaces + Turbo** for monorepo orchestration

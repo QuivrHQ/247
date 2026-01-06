@@ -2,7 +2,7 @@
 
 import { forwardRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Clock, MessageSquare, Shield, CheckCircle, Circle, Loader2, X, Activity } from 'lucide-react';
+import { Zap, Clock, MessageSquare, Shield, Circle, Loader2, X, Activity } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
 import { type SessionStatus } from './ui/status-badge';
 import { ConfirmDialog } from './ui/confirm-dialog';
@@ -55,14 +55,6 @@ const statusConfig: Record<
     borderColor: 'border-purple-500/30',
     glow: 'shadow-purple-500/20',
     label: 'Permission',
-  },
-  stopped: {
-    icon: CheckCircle,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10',
-    borderColor: 'border-emerald-500/30',
-    glow: 'shadow-emerald-500/20',
-    label: 'Done',
   },
   ended: {
     icon: Circle,

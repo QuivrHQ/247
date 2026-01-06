@@ -8,64 +8,62 @@ import {
   Plus,
   Search,
   Zap,
-  Clock,
-  Filter,
   Keyboard,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SessionCard } from './SessionCard';
 import { SessionPreviewPopover } from './SessionPreviewPopover';
+import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus } from './ui/status-badge';
 import { cn } from '@/lib/utils';
 
-interface SessionSidebarProps {
-  sessions: SessionInfo[];
-  projects: string[];
-  currentSessionName: string | null;
-  currentProject: string;
-  onSelectSession: (sessionName: string | null, project: string) => void;
-  onNewSession: (project: string) => void;
-  onSessionKilled?: () => void;
-  agentUrl: string;
+interface SelectedSession {
+  machineId: string;
+  sessionName: string;
+  project: string;
+}
+
+interface HomeSidebarProps {
+  sessions: SessionWithMachine[];
+  selectedSession: SelectedSession | null;
+  onSelectSession: (machineId: string, sessionName: string, project: string) => void;
+  onNewSession: () => void;
+  onSessionKilled?: (machineId: string, sessionName: string) => void;
 }
 
 type FilterType = 'all' | 'active' | 'waiting' | 'done';
 
-export function SessionSidebar({
+export function HomeSidebar({
   sessions,
-  projects,
-  currentSessionName,
-  currentProject,
+  selectedSession,
   onSelectSession,
   onNewSession,
   onSessionKilled,
-  agentUrl,
-}: SessionSidebarProps) {
+}: HomeSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
-  const [hoveredSession, setHoveredSession] = useState<SessionInfo | null>(null);
+  const [hoveredSession, setHoveredSession] = useState<SessionWithMachine | null>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Kill session handler
   const handleKillSession = useCallback(
-    async (sessionName: string) => {
-      const protocol = agentUrl.includes('localhost') ? 'http' : 'https';
+    async (session: SessionWithMachine) => {
+      const protocol = session.agentUrl.includes('localhost') ? 'http' : 'https';
 
       try {
         const response = await fetch(
-          `${protocol}://${agentUrl}/api/sessions/${encodeURIComponent(sessionName)}`,
+          `${protocol}://${session.agentUrl}/api/sessions/${encodeURIComponent(session.name)}`,
           { method: 'DELETE' }
         );
 
         if (response.ok) {
           toast.success('Session terminated');
-          // If we killed the current session, show empty state
-          if (sessionName === currentSessionName) {
-            onSessionKilled?.();
+          // If we killed the selected session, notify parent
+          if (selectedSession?.sessionName === session.name) {
+            onSessionKilled?.(session.machineId, session.name);
           }
         } else {
           toast.error('Failed to terminate session');
@@ -75,7 +73,7 @@ export function SessionSidebar({
         toast.error('Could not connect to agent');
       }
     },
-    [agentUrl, currentSessionName, onSessionKilled]
+    [selectedSession, onSessionKilled]
   );
 
   // Filter and sort sessions
@@ -88,7 +86,8 @@ export function SessionSidebar({
       result = result.filter(
         (s) =>
           s.name.toLowerCase().includes(query) ||
-          s.project.toLowerCase().includes(query)
+          s.project.toLowerCase().includes(query) ||
+          s.machineName.toLowerCase().includes(query)
       );
     }
 
@@ -97,7 +96,7 @@ export function SessionSidebar({
       result = result.filter((s) => {
         if (filter === 'active') return s.status === 'running';
         if (filter === 'waiting') return ['waiting', 'permission'].includes(s.status);
-        if (filter === 'done') return ['ended', 'idle'].includes(s.status);
+        if (filter === 'done') return ['stopped', 'ended', 'idle'].includes(s.status);
         return true;
       });
     }
@@ -108,8 +107,9 @@ export function SessionSidebar({
         running: 0,
         permission: 1,
         waiting: 2,
-        idle: 3,
-        ended: 4,
+        stopped: 3,
+        idle: 4,
+        ended: 5,
       };
       const orderA = statusOrder[a.status] ?? 10;
       const orderB = statusOrder[b.status] ?? 10;
@@ -140,36 +140,36 @@ export function SessionSidebar({
         const index = parseInt(e.key) - 1;
         if (index < filteredSessions.length) {
           const session = filteredSessions[index];
-          onSelectSession(session.name, session.project);
+          onSelectSession(session.machineId, session.name, session.project);
         }
       }
 
       // Cmd/Ctrl + N for new session
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault();
-        onNewSession(currentProject);
+        onNewSession();
       }
 
       // Cmd/Ctrl + [ and ] to navigate sessions
       if ((e.metaKey || e.ctrlKey) && e.key === '[') {
         e.preventDefault();
         const currentIndex = filteredSessions.findIndex(
-          (s) => s.name === currentSessionName
+          (s) => s.name === selectedSession?.sessionName
         );
         if (currentIndex > 0) {
           const session = filteredSessions[currentIndex - 1];
-          onSelectSession(session.name, session.project);
+          onSelectSession(session.machineId, session.name, session.project);
         }
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === ']') {
         e.preventDefault();
         const currentIndex = filteredSessions.findIndex(
-          (s) => s.name === currentSessionName
+          (s) => s.name === selectedSession?.sessionName
         );
         if (currentIndex < filteredSessions.length - 1) {
           const session = filteredSessions[currentIndex + 1];
-          onSelectSession(session.name, session.project);
+          onSelectSession(session.machineId, session.name, session.project);
         }
       }
 
@@ -182,7 +182,7 @@ export function SessionSidebar({
         }
       }
     },
-    [filteredSessions, currentSessionName, currentProject, onSelectSession, onNewSession]
+    [filteredSessions, selectedSession, onSelectSession, onNewSession]
   );
 
   useEffect(() => {
@@ -190,7 +190,7 @@ export function SessionSidebar({
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, [handleKeyboard]);
 
-  const handleSessionHover = (session: SessionInfo | null, event?: React.MouseEvent) => {
+  const handleSessionHover = (session: SessionWithMachine | null, event?: React.MouseEvent) => {
     setHoveredSession(session);
     if (event && session) {
       const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -290,7 +290,7 @@ export function SessionSidebar({
         {/* New Session Button */}
         <div className={cn('p-3', isCollapsed && 'px-2')}>
           <button
-            onClick={() => onNewSession(currentProject)}
+            onClick={onNewSession}
             className={cn(
               'flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-medium text-sm transition-all',
               'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400',
@@ -310,7 +310,7 @@ export function SessionSidebar({
           <AnimatePresence mode="popLayout">
             {filteredSessions.map((session, index) => (
               <motion.div
-                key={session.name}
+                key={`${session.machineId}-${session.name}`}
                 layout
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -318,12 +318,12 @@ export function SessionSidebar({
                 transition={{ duration: 0.15, delay: index * 0.02 }}
               >
                 <SessionCard
-                  session={session}
-                  isActive={session.name === currentSessionName}
+                  session={session as SessionInfo}
+                  isActive={session.name === selectedSession?.sessionName}
                   isCollapsed={isCollapsed}
                   index={index}
-                  onClick={() => onSelectSession(session.name, session.project)}
-                  onKill={() => handleKillSession(session.name)}
+                  onClick={() => onSelectSession(session.machineId, session.name, session.project)}
+                  onKill={() => handleKillSession(session)}
                   onMouseEnter={(e) => handleSessionHover(session, e)}
                   onMouseLeave={() => handleSessionHover(null)}
                 />
@@ -362,9 +362,9 @@ export function SessionSidebar({
 
       {/* Session Preview Popover */}
       <SessionPreviewPopover
-        session={hoveredSession}
+        session={hoveredSession as SessionInfo | null}
         position={hoverPosition}
-        agentUrl={agentUrl}
+        agentUrl={hoveredSession?.agentUrl || ''}
       />
 
       {/* Keyboard Shortcuts Modal */}
@@ -399,7 +399,8 @@ export function SessionSidebar({
                 <ShortcutRow keys={['⌘', '1-9']} description="Switch to session 1-9" />
                 <ShortcutRow keys={['⌘', '[']} description="Previous session" />
                 <ShortcutRow keys={['⌘', ']']} description="Next session" />
-                <ShortcutRow keys={['⌘', '⇧', 'F']} description="Search in terminal" />
+                <ShortcutRow keys={['⌘', '1']} description="Terminal tab" />
+                <ShortcutRow keys={['⌘', '2']} description="Editor tab" />
                 <ShortcutRow keys={['?']} description="Show this help" />
               </div>
             </motion.div>

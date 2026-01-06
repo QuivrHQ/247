@@ -151,7 +151,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
 
       for (const session of newSessions) {
         const prevSession = prevSessions.find((s) => s.name === session.name);
-        const isActionable = ['permission', 'stopped', 'waiting'].includes(session.status);
+        const isActionable = ['permission', 'waiting'].includes(session.status);
 
         const isNewEvent =
           !prevSession ||

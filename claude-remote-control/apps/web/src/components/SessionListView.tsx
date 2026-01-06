@@ -54,7 +54,7 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
       result = result.filter((s) => {
         if (statusFilter === 'active') return s.status === 'running';
         if (statusFilter === 'waiting') return ['waiting', 'permission'].includes(s.status);
-        if (statusFilter === 'done') return ['stopped', 'ended', 'idle'].includes(s.status);
+        if (statusFilter === 'done') return ['ended', 'idle'].includes(s.status);
         return true;
       });
     }

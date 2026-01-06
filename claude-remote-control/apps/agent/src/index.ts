@@ -6,7 +6,7 @@ const PORT = config.agent?.port || 4678;
 async function main() {
   console.log(`Starting Claude Remote Agent for ${config.machine.name}...`);
 
-  const server = createServer();
+  const server = await createServer();
 
   server.listen(PORT, () => {
     console.log(`\n🚀 Agent running on http://localhost:${PORT}`);

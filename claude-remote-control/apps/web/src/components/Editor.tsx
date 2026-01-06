@@ -17,6 +17,9 @@ export function Editor({ agentUrl, project, onStatusChange }: EditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
+  // Debug: log what project the Editor component received
+  console.log('[Editor] mounted/rendered with project:', project, 'status:', status);
+
   // Build editor URL - direct access to code-server port when available
   const buildEditorUrl = useCallback(() => {
     // If we have the port from status, access code-server directly (works in local dev)

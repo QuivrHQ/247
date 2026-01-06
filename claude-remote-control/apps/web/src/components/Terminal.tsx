@@ -18,7 +18,7 @@ interface TerminalProps {
   environmentId?: string;
   onConnectionChange?: (connected: boolean) => void;
   onSessionCreated?: (sessionName: string) => void;
-  claudeStatus?: 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
+  claudeStatus?: 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
 }
 
 // Generate human-readable session names with project prefix (same as agent)

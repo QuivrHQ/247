@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-export type SessionStatus = 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
+export type SessionStatus = 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
 
 const statusConfig: Record<
   SessionStatus,
@@ -32,12 +32,6 @@ const statusConfig: Record<
     description: 'Claude needs your authorization to proceed',
     className: 'bg-purple-500/15 text-purple-300 border border-purple-500/40',
     dotClassName: 'bg-purple-400 animate-pulse',
-  },
-  stopped: {
-    label: 'Done',
-    description: 'Task completed successfully',
-    className: 'bg-green-500/15 text-green-300 border border-green-500/40',
-    dotClassName: 'bg-green-400',
   },
   ended: {
     label: 'Ended',
@@ -125,7 +119,6 @@ export function CountBadge({ status, count, showTooltip = true, className, ...pr
     running: 'running',
     waiting: 'waiting',
     permission: 'permission',
-    stopped: 'done',
     ended: 'ended',
     idle: 'idle',
   };

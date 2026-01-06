@@ -7,7 +7,6 @@ import {
   Clock,
   MessageSquare,
   Shield,
-  CheckCircle,
   Circle,
   Loader2,
   Monitor,
@@ -57,14 +56,6 @@ const statusConfig: Record<
     borderColor: 'border-purple-500/30',
     glow: 'shadow-purple-500/20',
     label: 'Permission',
-  },
-  stopped: {
-    icon: CheckCircle,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10',
-    borderColor: 'border-emerald-500/30',
-    glow: 'shadow-emerald-500/20',
-    label: 'Done',
   },
   ended: {
     icon: Circle,

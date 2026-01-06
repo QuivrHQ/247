@@ -23,7 +23,6 @@ const statusColors: Record<SessionStatus, string> = {
   running: 'text-blue-400 bg-blue-500/20',
   waiting: 'text-orange-400 bg-orange-500/20',
   permission: 'text-purple-400 bg-purple-500/20',
-  stopped: 'text-emerald-400 bg-emerald-500/20',
   ended: 'text-gray-400 bg-gray-500/20',
   idle: 'text-gray-400 bg-gray-500/20',
 };

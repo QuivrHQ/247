@@ -37,7 +37,6 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
   const runningCount = sessions.filter((s) => s.status === 'running').length;
   const waitingCount = sessions.filter((s) => s.status === 'waiting').length;
   const permissionCount = sessions.filter((s) => s.status === 'permission').length;
-  const doneCount = sessions.filter((s) => s.status === 'stopped').length;
   const hooksActive = sessions.some((s) => s.statusSource === 'hook');
 
   return (
@@ -112,7 +111,6 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
           <CountBadge status="running" count={runningCount} />
           <CountBadge status="waiting" count={waitingCount} />
           <CountBadge status="permission" count={permissionCount} />
-          <CountBadge status="stopped" count={doneCount} />
 
           {/* Hooks indicator */}
           <TooltipProvider delayDuration={300}>

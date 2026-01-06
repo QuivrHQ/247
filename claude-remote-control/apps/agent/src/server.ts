@@ -31,8 +31,9 @@ import config from '../config.json' with { type: 'json' };
 import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@claude-remote/shared';
 
 // Store session status from Claude Code hooks (more reliable than tmux heuristics)
+// 5 states: running (working), waiting (needs input), permission (needs auth), ended (terminated), idle (no hook data)
 interface HookStatus {
-  status: 'running' | 'waiting' | 'stopped' | 'ended' | 'permission';
+  status: 'running' | 'waiting' | 'ended' | 'permission';
   lastEvent: string;
   lastActivity: number;
   lastStatusChange: number; // Timestamp when status actually changed
@@ -41,10 +42,9 @@ interface HookStatus {
   stopReason?: string;
 }
 
-// Store by tmux session name (primary) and Claude session_id (backup for debugging)
-// NOTE: Removed projectHookStatus - it caused status sharing between sessions in same project
+// Store by tmux session name - single source of truth for status
+// NOTE: Removed claudeSessionStatus - redundant, only used tmux session name for per-session tracking
 const tmuxSessionStatus = new Map<string, HookStatus>();
-const claudeSessionStatus = new Map<string, HookStatus>();
 
 // Track pending tool executions to detect permission waiting
 const pendingTools = new Map<string, { toolName: string; timestamp: number }>();
@@ -101,7 +101,6 @@ function cleanupStatusMaps() {
   const STALE_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours
 
   let cleanedTmux = 0;
-  let cleanedClaude = 0;
   let cleanedPending = 0;
 
   // Get active tmux sessions
@@ -125,15 +124,6 @@ function cleanupStatusMaps() {
     }
   }
 
-  // Clean claudeSessionStatus - remove if stale
-  for (const [sessionId, status] of claudeSessionStatus) {
-    const isStale = (now - status.lastActivity) > STALE_THRESHOLD;
-    if (isStale) {
-      claudeSessionStatus.delete(sessionId);
-      cleanedClaude++;
-    }
-  }
-
   // Clean pendingTools
   for (const [key, { timestamp }] of pendingTools) {
     if ((now - timestamp) > STALE_THRESHOLD) {
@@ -142,15 +132,15 @@ function cleanupStatusMaps() {
     }
   }
 
-  if (cleanedTmux > 0 || cleanedClaude > 0 || cleanedPending > 0) {
-    console.log(`[Status Cleanup] Removed ${cleanedTmux} tmux entries, ${cleanedClaude} claude entries, ${cleanedPending} pending tools`);
+  if (cleanedTmux > 0 || cleanedPending > 0) {
+    console.log(`[Status Cleanup] Removed ${cleanedTmux} tmux entries, ${cleanedPending} pending tools`);
   }
 }
 
 // Run cleanup every hour
 setInterval(cleanupStatusMaps, 60 * 60 * 1000);
 
-export function createServer() {
+export async function createServer() {
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -158,9 +148,9 @@ export function createServer() {
   const server = createHttpServer(app);
   const wss = new WebSocketServer({ noServer: true });
 
-  // Initialize editor manager
+  // Initialize editor manager (cleans up orphan code-server processes)
   const typedConfig = config as unknown as AgentConfig;
-  initEditor(typedConfig.editor, config.projects.basePath);
+  await initEditor(typedConfig.editor, config.projects.basePath);
 
   // Initialize environments
   loadEnvironments();
@@ -302,9 +292,9 @@ export function createServer() {
               const existing = tmuxSessionStatus.get(sessionName);
               const currentStatus = existing?.status;
 
-              // Only set to running if Claude was waiting for input (stopped/waiting)
+              // Only set to running if Claude was waiting for input
               // Don't overwrite: running (already running), permission (user accepting/rejecting), ended
-              if (!currentStatus || currentStatus === 'stopped' || currentStatus === 'waiting') {
+              if (!currentStatus || currentStatus === 'waiting') {
                 const now = Date.now();
                 tmuxSessionStatus.set(sessionName, {
                   status: 'running',
@@ -558,7 +548,7 @@ export function createServer() {
         status = 'permission';
         break;
       case 'Stop':
-        status = 'stopped'; // Claude finished, waiting for next prompt
+        status = 'waiting'; // Claude finished, waiting for next prompt
         if (trackingKey) {
           pendingTools.delete(trackingKey);
         }
@@ -626,14 +616,8 @@ export function createServer() {
       console.warn(`[Hook] WARNING: Missing tmux_session for ${event} (session_id=${session_id}, project=${project})`);
     }
 
-    // Priority 2: Store by Claude session_id (backup for debugging)
-    if (session_id) {
-      const existing = claudeSessionStatus.get(session_id);
-      claudeSessionStatus.set(session_id, createHookData(existing));
-    }
-
-    // NOTE: Removed projectHookStatus storage - it caused status sharing between sessions
-    // in the same project. Per-session tracking via tmux_session is now required.
+    // NOTE: Removed claudeSessionStatus and projectHookStatus storage
+    // Per-session tracking via tmux_session is now the single source of truth
 
     const identifier = tmux_session || session_id || project;
     console.log(`[Hook] ${identifier}: ${event} → ${status}${tool_name ? ` (${tool_name})` : ''}${!tmux_session ? ' (NO TMUX SESSION!)' : ''}`);
@@ -651,7 +635,7 @@ export function createServer() {
       name: string;
       project: string;
       createdAt: number;
-      status: 'running' | 'waiting' | 'stopped' | 'ended' | 'idle' | 'permission';
+      status: 'running' | 'waiting' | 'ended' | 'idle' | 'permission';
       statusSource: 'hook' | 'tmux';
       lastActivity?: string;
       lastEvent?: string;

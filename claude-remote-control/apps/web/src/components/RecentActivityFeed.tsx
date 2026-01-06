@@ -6,7 +6,6 @@ import {
   Loader2,
   MessageSquare,
   Shield,
-  CheckCircle,
   Circle,
   Clock,
   Zap,
@@ -60,12 +59,6 @@ const statusConfig: Record<
     color: 'text-purple-400',
     bgColor: 'bg-purple-500/20',
     label: 'Permission needed',
-  },
-  stopped: {
-    icon: CheckCircle,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/20',
-    label: 'Completed',
   },
   ended: {
     icon: Circle,

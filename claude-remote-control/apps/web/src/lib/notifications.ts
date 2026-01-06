@@ -2,7 +2,7 @@ export interface SessionInfo {
   name: string;
   project: string;
   createdAt: number;
-  status: 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
+  status: 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
   statusSource?: 'hook' | 'tmux';
   lastActivity?: string;
   lastEvent?: string;

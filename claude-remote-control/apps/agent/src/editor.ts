@@ -1,4 +1,5 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execSync } from 'child_process';
+import { createConnection } from 'net';
 import type { EditorConfig, EditorStatus } from '@claude-remote/shared';
 
 interface EditorInstance {
@@ -26,23 +27,83 @@ let editorConfig: EditorConfig = DEFAULT_CONFIG;
 let projectsBasePath = '~/Dev';
 
 // Initialize editor manager with config
-export function initEditor(config: EditorConfig | undefined, basePath: string): void {
+export async function initEditor(config: EditorConfig | undefined, basePath: string): Promise<void> {
   editorConfig = config || DEFAULT_CONFIG;
   projectsBasePath = basePath;
 
   if (editorConfig.enabled) {
+    // Kill any orphan code-server processes from previous runs
+    console.log('[Editor] Cleaning up orphan code-server processes...');
+    await killOrphanCodeServers();
+
     // Start idle cleanup interval (check every 5 minutes)
     setInterval(cleanupIdleEditors, 5 * 60 * 1000);
     console.log('[Editor] Manager initialized, idle timeout:', editorConfig.idleTimeout / 1000, 's');
   }
 }
 
-// Allocate next available port from range
-function allocatePort(): number | null {
+// Check if a port is actually in use by trying to connect
+function isPortInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = createConnection({ port, host: '127.0.0.1' });
+    socket.setTimeout(500);
+
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// Kill any orphan code-server processes on the port range
+async function killOrphanCodeServers(): Promise<void> {
+  try {
+    // Find code-server processes listening on our port range
+    const result = execSync(
+      `lsof -i :${editorConfig.portRange.start}-${editorConfig.portRange.end} -t 2>/dev/null || true`,
+      { encoding: 'utf8' }
+    ).trim();
+
+    if (result) {
+      const pids = result.split('\n').filter(Boolean);
+      for (const pid of pids) {
+        try {
+          console.log(`[Editor] Killing orphan process on port range: PID ${pid}`);
+          process.kill(parseInt(pid), 'SIGTERM');
+        } catch {
+          // Process may have already exited
+        }
+      }
+      // Wait a bit for processes to terminate
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  } catch {
+    // lsof may not be available or no processes found
+  }
+}
+
+// Allocate next available port from range (checks actual usage)
+async function allocatePort(): Promise<number | null> {
   for (let port = editorConfig.portRange.start; port <= editorConfig.portRange.end; port++) {
     if (!usedPorts.has(port)) {
-      usedPorts.add(port);
-      return port;
+      // Double-check the port is actually free
+      const inUse = await isPortInUse(port);
+      if (!inUse) {
+        usedPorts.add(port);
+        return port;
+      } else {
+        console.log(`[Editor] Port ${port} is in use by another process, skipping`);
+      }
     }
   }
   return null;
@@ -62,8 +123,8 @@ export async function getOrStartEditor(project: string): Promise<EditorInstance>
     return existing;
   }
 
-  // Allocate port
-  const port = allocatePort();
+  // Allocate port (checks actual port availability)
+  const port = await allocatePort();
   if (!port) {
     throw new Error('No available ports for code-server');
   }

@@ -18,7 +18,7 @@ export interface Session {
   id: string;
   machineId: string;
   project: string | null;
-  status: 'running' | 'stopped' | 'waiting';
+  status: SessionStatus;
   tmuxSession: string | null;
   startedAt: Date;
   endedAt: Date | null;
@@ -49,7 +49,8 @@ export type WSMessageFromAgent =
   | { type: 'history'; data: string; lines: number };
 
 // Session status types for real-time updates
-export type SessionStatus = 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
+// 5 states: running (working), waiting (needs input), permission (needs auth), ended (terminated), idle (no hook data)
+export type SessionStatus = 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
 export type StatusSource = 'hook' | 'tmux';
 
 // Session info for status WebSocket

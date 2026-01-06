@@ -80,6 +80,50 @@ vi.mock('../../src/editor.js', () => ({
   shutdownAllEditors: vi.fn(),
 }));
 
+// Mock database to use in-memory database and avoid file locking issues
+vi.mock('../../src/db/index.js', async () => {
+  const Database = (await import('better-sqlite3')).default;
+  const { CREATE_TABLES_SQL } = await import('../../src/db/schema.js');
+
+  let db: any = null;
+
+  return {
+    initDatabase: vi.fn(() => {
+      if (!db) {
+        db = new Database(':memory:');
+        db.exec(CREATE_TABLES_SQL);
+      }
+      return db;
+    }),
+    getDatabase: vi.fn(() => {
+      if (!db) {
+        db = new Database(':memory:');
+        db.exec(CREATE_TABLES_SQL);
+      }
+      return db;
+    }),
+    closeDatabase: vi.fn(() => {
+      if (db) {
+        db.close();
+        db = null;
+      }
+    }),
+    initTestDatabase: vi.fn(() => {
+      db = new Database(':memory:');
+      db.exec(CREATE_TABLES_SQL);
+      return db;
+    }),
+    migrateEnvironmentsFromJson: vi.fn().mockReturnValue(false),
+    getDatabaseStats: vi.fn().mockReturnValue({ sessions: 0, history: 0, environments: 0 }),
+    RETENTION_CONFIG: {
+      activeSessionMaxAge: 24 * 60 * 60 * 1000,
+      archivedSessionMaxAge: 30 * 24 * 60 * 60 * 1000,
+      statusHistoryMaxAge: 7 * 24 * 60 * 60 * 1000,
+      cleanupInterval: 60 * 60 * 1000,
+    },
+  };
+});
+
 describe('Hooks Status API', () => {
   let server: any;
 

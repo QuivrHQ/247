@@ -34,9 +34,8 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
   const isOnline = machine.status === 'online';
   const agentUrl = machine.config?.agentUrl || 'localhost:4678';
 
-  const runningCount = sessions.filter((s) => s.status === 'running').length;
-  const waitingCount = sessions.filter((s) => s.status === 'waiting').length;
-  const permissionCount = sessions.filter((s) => s.status === 'permission').length;
+  const workingCount = sessions.filter((s) => s.status === 'working').length;
+  const needsAttentionCount = sessions.filter((s) => s.status === 'needs_attention').length;
   const hooksActive = sessions.some((s) => s.statusSource === 'hook');
 
   return (
@@ -108,9 +107,8 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
       {/* Session Badges */}
       {isOnline && (
         <div className="flex items-center gap-2 mt-4 flex-wrap">
-          <CountBadge status="running" count={runningCount} />
-          <CountBadge status="waiting" count={waitingCount} />
-          <CountBadge status="permission" count={permissionCount} />
+          <CountBadge status="working" count={workingCount} />
+          <CountBadge status="needs_attention" count={needsAttentionCount} />
 
           {/* Hooks indicator */}
           <TooltipProvider delayDuration={300}>

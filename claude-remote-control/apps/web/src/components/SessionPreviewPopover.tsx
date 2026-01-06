@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, Zap, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus } from './ui/status-badge';
+import { type SessionStatus, type AttentionReason } from '@claude-remote/shared';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 
@@ -20,11 +20,22 @@ interface TerminalSnapshot {
 }
 
 const statusColors: Record<SessionStatus, string> = {
-  running: 'text-blue-400 bg-blue-500/20',
-  waiting: 'text-orange-400 bg-orange-500/20',
-  permission: 'text-purple-400 bg-purple-500/20',
-  ended: 'text-gray-400 bg-gray-500/20',
+  working: 'text-blue-400 bg-blue-500/20',
+  needs_attention: 'text-orange-400 bg-orange-500/20',
   idle: 'text-gray-400 bg-gray-500/20',
+};
+
+const statusLabels: Record<SessionStatus, string> = {
+  working: 'Working',
+  needs_attention: 'Attention',
+  idle: 'Idle',
+};
+
+const attentionLabels: Record<AttentionReason, string> = {
+  permission: 'Permission',
+  input: 'Waiting',
+  plan_approval: 'Plan Ready',
+  task_complete: 'Done',
 };
 
 const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds while hovering
@@ -139,7 +150,13 @@ export function SessionPreviewPopover({
   if (!session) return null;
 
   const status = session.status as SessionStatus;
+  const attentionReason = session.attentionReason as AttentionReason | undefined;
   const displayName = session.name.split('--')[1] || session.name;
+
+  // Use attention-specific label if available
+  const label = status === 'needs_attention' && attentionReason
+    ? attentionLabels[attentionReason]
+    : statusLabels[status] || status;
 
   return (
     <AnimatePresence>
@@ -182,7 +199,7 @@ export function SessionPreviewPopover({
                       statusColors[status]
                     )}
                   >
-                    {status}
+                    {label}
                   </span>
                 </div>
               </div>

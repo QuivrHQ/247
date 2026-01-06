@@ -80,24 +80,29 @@ export function createTerminal(
     console.log(`[Terminal] Shell exited: code=${exitCode}, signal=${signal}, session='${sessionName}'`);
   });
 
-  // If new session, configure tmux options
+  // Configure tmux options and inject environment variables
   if (!existingSession) {
     setTimeout(() => {
       exec(`tmux set-option -t "${sessionName}" history-limit 10000`);
       exec(`tmux set-option -t "${sessionName}" mouse on`);
 
-      // Inject custom environment variables directly into the shell
-      // This ensures vars are session-scoped and don't leak to other sessions
-      if (Object.keys(customEnvVars).length > 0) {
-        const exportCmds = Object.entries(customEnvVars)
-          .map(([key, value]) => `export ${key}="${value.replace(/"/g, '\\"')}"`)
-          .join('; ');
-        console.log(`[Terminal] Injecting env vars into session '${sessionName}': ${Object.keys(customEnvVars).join(', ')}`);
-        exec(`tmux send-keys -t "${sessionName}" "${exportCmds}" C-m`);
-      }
+      // ALWAYS inject CLAUDE_TMUX_SESSION into the shell for hook detection
+      // This is critical for hooks to identify which session they belong to
+      const baseExport = `export CLAUDE_TMUX_SESSION="${sessionName}"`;
+
+      // Add custom environment variables if present
+      const allExports = Object.keys(customEnvVars).length > 0
+        ? `${baseExport}; ${Object.entries(customEnvVars)
+            .map(([key, value]) => `export ${key}="${value.replace(/"/g, '\\"')}"`)
+            .join('; ')}`
+        : baseExport;
+
+      console.log(`[Terminal] Injecting CLAUDE_TMUX_SESSION and ${Object.keys(customEnvVars).length} custom vars into session '${sessionName}'`);
+      exec(`tmux send-keys -t "${sessionName}" "${allExports}" C-m`);
     }, 100);
   } else {
-    // Also enable mouse for existing sessions
+    // For existing sessions, just ensure mouse is enabled
+    // CLAUDE_TMUX_SESSION was already injected when the session was created
     setTimeout(() => {
       exec(`tmux set-option -t "${sessionName}" mouse on`);
     }, 100);

@@ -11,9 +11,11 @@ import {
   Loader2,
   Monitor,
   Activity,
+  CheckCircle,
+  FileText,
 } from 'lucide-react';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
-import { type SessionStatus } from './ui/status-badge';
+import { type SessionStatus, type AttentionReason } from '@claude-remote/shared';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 
@@ -33,37 +35,21 @@ const statusConfig: Record<
     label: string;
   }
 > = {
-  running: {
+  working: {
     icon: Loader2,
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/10',
     borderColor: 'border-blue-500/30',
     glow: 'shadow-blue-500/20',
-    label: 'Running',
+    label: 'Working',
   },
-  waiting: {
+  needs_attention: {
     icon: MessageSquare,
     color: 'text-orange-400',
     bgColor: 'bg-orange-500/10',
     borderColor: 'border-orange-500/30',
     glow: 'shadow-orange-500/20',
-    label: 'Waiting',
-  },
-  permission: {
-    icon: Shield,
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
-    borderColor: 'border-purple-500/30',
-    glow: 'shadow-purple-500/20',
-    label: 'Permission',
-  },
-  ended: {
-    icon: Circle,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
-    borderColor: 'border-gray-500/30',
-    glow: 'shadow-gray-500/20',
-    label: 'Ended',
+    label: 'Attention',
   },
   idle: {
     icon: Circle,
@@ -73,6 +59,21 @@ const statusConfig: Record<
     glow: 'shadow-gray-500/20',
     label: 'Idle',
   },
+};
+
+// Icons for specific attention reasons
+const attentionIcons: Record<AttentionReason, typeof Zap> = {
+  permission: Shield,
+  input: MessageSquare,
+  plan_approval: FileText,
+  task_complete: CheckCircle,
+};
+
+const attentionLabels: Record<AttentionReason, string> = {
+  permission: 'Permission',
+  input: 'Waiting',
+  plan_approval: 'Plan Ready',
+  task_complete: 'Done',
 };
 
 // Format time since status change
@@ -96,15 +97,25 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
     return () => clearInterval(interval);
   }, []);
 
-  const status = session.status as SessionStatus;
+  const status = session.status;
+  const attentionReason = session.attentionReason;
   const config = statusConfig[status] || statusConfig.idle;
-  const Icon = config.icon;
+
+  // Use attention-specific icon if available
+  const Icon = status === 'needs_attention' && attentionReason
+    ? attentionIcons[attentionReason]
+    : config.icon;
+
+  // Use attention-specific label if available
+  const label = status === 'needs_attention' && attentionReason
+    ? attentionLabels[attentionReason]
+    : config.label;
 
   // Extract readable session name (part after --)
   const displayName = session.name.split('--')[1] || session.name;
 
   // Check if needs attention
-  const needsAttention = ['waiting', 'permission'].includes(status);
+  const needsAttention = status === 'needs_attention';
   const statusTime = formatStatusTime(session.lastStatusChange);
 
   return (
@@ -122,7 +133,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
         {/* Status Icon */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={status}
+            key={`${status}-${attentionReason}`}
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
@@ -136,7 +147,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
             )}
           >
             <Icon
-              className={cn('w-6 h-6', config.color, status === 'running' && 'animate-spin')}
+              className={cn('w-6 h-6', config.color, status === 'working' && 'animate-spin')}
             />
           </motion.div>
         </AnimatePresence>
@@ -148,7 +159,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
             <span className="font-semibold text-white truncate">{displayName}</span>
             <AnimatePresence mode="wait">
               <motion.span
-                key={status}
+                key={`${status}-${attentionReason}`}
                 initial={{ y: -5, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 5, opacity: 0 }}
@@ -161,7 +172,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
                   config.borderColor
                 )}
               >
-                {config.label}
+                {label}
               </motion.span>
             </AnimatePresence>
             {statusTime && (

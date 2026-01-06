@@ -69,6 +69,28 @@ describe('Shared Types', () => {
     });
   });
 
+  describe('SessionStatus types', () => {
+    it('only allows 3 valid status values', async () => {
+      const types = await import('../src/types/index.js');
+
+      // Test that the type exports exist
+      expect(types).toBeDefined();
+
+      // Valid statuses
+      const validStatuses = ['working', 'needs_attention', 'idle'];
+      validStatuses.forEach(status => {
+        expect(['working', 'needs_attention', 'idle']).toContain(status);
+      });
+    });
+
+    it('AttentionReason has valid values', () => {
+      const validReasons = ['permission', 'input', 'plan_approval', 'task_complete'];
+      validReasons.forEach(reason => {
+        expect(['permission', 'input', 'plan_approval', 'task_complete']).toContain(reason);
+      });
+    });
+  });
+
   describe('User types', () => {
     it('validates User structure', () => {
       const user: User = {

@@ -85,7 +85,7 @@ describe('Hooks Status API', () => {
 
   beforeAll(async () => {
     const { createServer } = await import('../../src/server.js');
-    server = createServer();
+    server = await createServer();
   });
 
   afterAll(() => {
@@ -106,36 +106,6 @@ describe('Hooks Status API', () => {
           event: 'SessionStart',
           session_id: 'test-session-123',
           tmux_session: 'project--brave-lion-42',
-          project: 'project',
-        });
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ received: true });
-    });
-
-    it('accepts PreToolUse event', async () => {
-      const res = await request(server)
-        .post('/api/hooks/status')
-        .send({
-          event: 'PreToolUse',
-          session_id: 'test-session-123',
-          tmux_session: 'project--brave-lion-42',
-          tool_name: 'Bash',
-          project: 'project',
-        });
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ received: true });
-    });
-
-    it('accepts PostToolUse event', async () => {
-      const res = await request(server)
-        .post('/api/hooks/status')
-        .send({
-          event: 'PostToolUse',
-          session_id: 'test-session-123',
-          tmux_session: 'project--brave-lion-42',
-          tool_name: 'Bash',
           project: 'project',
         });
 
@@ -219,11 +189,27 @@ describe('Hooks Status API', () => {
       const res = await request(server)
         .post('/api/hooks/status')
         .send({
-          event: 'PreToolUse',
+          event: 'SessionStart',
           session_id: 'test-session-123',
           tmux_session: 'project--brave-lion-42',
-          tool_name: 'Read',
+          status: 'working',
           timestamp,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ received: true });
+    });
+
+    it('accepts status with attention_reason', async () => {
+      const res = await request(server)
+        .post('/api/hooks/status')
+        .send({
+          event: 'PermissionRequest',
+          session_id: 'test-session-123',
+          tmux_session: 'project--brave-lion-42',
+          status: 'needs_attention',
+          attention_reason: 'permission',
+          project: 'project',
         });
 
       expect(res.status).toBe(200);
@@ -258,57 +244,41 @@ describe('Hooks Status API', () => {
   });
 
   describe('Hook status lifecycle', () => {
-    it('tracks full session lifecycle', async () => {
+    it('tracks full session lifecycle with new status model', async () => {
       const sessionId = 'lifecycle-test';
       const tmuxSession = 'project--lifecycle-test-1';
 
-      // 1. Session start
+      // 1. Session start -> working
       await request(server)
         .post('/api/hooks/status')
         .send({
           event: 'SessionStart',
           session_id: sessionId,
           tmux_session: tmuxSession,
+          status: 'working',
           project: 'project',
         });
 
-      // 2. Tool use
-      await request(server)
-        .post('/api/hooks/status')
-        .send({
-          event: 'PreToolUse',
-          session_id: sessionId,
-          tmux_session: tmuxSession,
-          tool_name: 'Bash',
-        });
-
-      // 3. Tool complete
-      await request(server)
-        .post('/api/hooks/status')
-        .send({
-          event: 'PostToolUse',
-          session_id: sessionId,
-          tmux_session: tmuxSession,
-          tool_name: 'Bash',
-        });
-
-      // 4. Stop (waiting for input)
+      // 2. Stop (waiting for input) -> needs_attention
       await request(server)
         .post('/api/hooks/status')
         .send({
           event: 'Stop',
           session_id: sessionId,
           tmux_session: tmuxSession,
+          status: 'needs_attention',
+          attention_reason: 'input',
           stop_reason: 'end_turn',
         });
 
-      // 5. Session end
+      // 3. Session end -> idle
       const res = await request(server)
         .post('/api/hooks/status')
         .send({
           event: 'SessionEnd',
           session_id: sessionId,
           tmux_session: tmuxSession,
+          status: 'idle',
         });
 
       expect(res.status).toBe(200);
@@ -318,43 +288,74 @@ describe('Hooks Status API', () => {
       const sessionId = 'permission-test';
       const tmuxSession = 'project--permission-test-1';
 
-      // 1. Tool requires permission
+      // 1. Session starts working
       await request(server)
         .post('/api/hooks/status')
         .send({
-          event: 'PreToolUse',
+          event: 'SessionStart',
           session_id: sessionId,
           tmux_session: tmuxSession,
-          tool_name: 'Bash',
+          status: 'working',
         });
 
-      // 2. Permission requested
+      // 2. Permission requested -> needs_attention with permission reason
       await request(server)
         .post('/api/hooks/status')
         .send({
           event: 'PermissionRequest',
           session_id: sessionId,
           tmux_session: tmuxSession,
+          status: 'needs_attention',
+          attention_reason: 'permission',
           tool_name: 'Bash',
         });
 
-      // 3. Permission granted, tool executes
-      await request(server)
+      // 3. Permission granted, back to working
+      const res = await request(server)
         .post('/api/hooks/status')
         .send({
-          event: 'PostToolUse',
+          event: 'SessionStart',
           session_id: sessionId,
           tmux_session: tmuxSession,
-          tool_name: 'Bash',
+          status: 'working',
         });
 
-      // All requests should succeed
+      expect(res.status).toBe(200);
+    });
+
+    it('handles notification event with idle_prompt', async () => {
+      const sessionId = 'notification-test';
+      const tmuxSession = 'project--notification-test-1';
+
+      // Notification (idle_prompt) -> needs_attention with input reason
+      const res = await request(server)
+        .post('/api/hooks/status')
+        .send({
+          event: 'Notification',
+          session_id: sessionId,
+          tmux_session: tmuxSession,
+          notification_type: 'idle_prompt',
+          status: 'needs_attention',
+          attention_reason: 'input',
+        });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('handles task_complete stop reason', async () => {
+      const sessionId = 'task-complete-test';
+      const tmuxSession = 'project--task-complete-test-1';
+
+      // Stop with task_complete reason
       const res = await request(server)
         .post('/api/hooks/status')
         .send({
           event: 'Stop',
           session_id: sessionId,
           tmux_session: tmuxSession,
+          status: 'needs_attention',
+          attention_reason: 'task_complete',
+          stop_reason: 'stop_hook',
         });
 
       expect(res.status).toBe(200);

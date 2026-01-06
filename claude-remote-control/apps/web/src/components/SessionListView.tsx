@@ -52,9 +52,9 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
     // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter((s) => {
-        if (statusFilter === 'active') return ['running', 'idle'].includes(s.status);
-        if (statusFilter === 'waiting') return ['waiting', 'permission'].includes(s.status);
-        if (statusFilter === 'done') return ['ended'].includes(s.status);
+        if (statusFilter === 'active') return s.status === 'working';
+        if (statusFilter === 'waiting') return s.status === 'needs_attention';
+        if (statusFilter === 'done') return s.status === 'idle';
         return true;
       });
     }
@@ -69,15 +69,15 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
       result = result.filter((s) => s.machineName === machineFilter);
     }
 
-    // Sort: attention-needing first, then by lastStatusChange/createdAt
+    // Sort: needs_attention first, then working, then by lastStatusChange/createdAt
     return result.sort((a, b) => {
-      const aAttention = ['waiting', 'permission'].includes(a.status);
-      const bAttention = ['waiting', 'permission'].includes(b.status);
+      const aAttention = a.status === 'needs_attention';
+      const bAttention = b.status === 'needs_attention';
       if (aAttention !== bAttention) return aAttention ? -1 : 1;
 
-      const aRunning = a.status === 'running';
-      const bRunning = b.status === 'running';
-      if (aRunning !== bRunning) return aRunning ? -1 : 1;
+      const aWorking = a.status === 'working';
+      const bWorking = b.status === 'working';
+      if (aWorking !== bWorking) return aWorking ? -1 : 1;
 
       const aTime = a.lastStatusChange || a.createdAt || 0;
       const bTime = b.lastStatusChange || b.createdAt || 0;
@@ -89,8 +89,8 @@ export function SessionListView({ sessions, onSelectSession }: SessionListViewPr
   const statusCounts = useMemo(() => {
     return sessions.reduce(
       (acc, s) => {
-        if (['running', 'idle'].includes(s.status)) acc.active++;
-        else if (['waiting', 'permission'].includes(s.status)) acc.waiting++;
+        if (s.status === 'working') acc.active++;
+        else if (s.status === 'needs_attention') acc.waiting++;
         else acc.done++;
         return acc;
       },

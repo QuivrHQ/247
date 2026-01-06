@@ -1,8 +1,11 @@
+import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+
 export interface SessionInfo {
   name: string;
   project: string;
   createdAt: number;
-  status: 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
+  status: SessionStatus;
+  attentionReason?: AttentionReason;
   statusSource?: 'hook' | 'tmux';
   lastActivity?: string;
   lastEvent?: string;
@@ -27,6 +30,14 @@ export function requestNotificationPermission(): void {
   }
 }
 
+// Notification messages for each attention reason
+const notificationMessages: Record<AttentionReason, string> = {
+  permission: 'Autorisation requise',
+  input: 'En attente de votre réponse',
+  plan_approval: 'Plan à approuver',
+  task_complete: 'Tâche terminée',
+};
+
 export function showSessionNotification(
   machineId: string,
   machineName: string,
@@ -44,12 +55,16 @@ export function showSessionNotification(
     return;
   }
 
-  const body =
-    session.status === 'permission'
-      ? 'Autorisation requise'
-      : session.status === 'waiting'
-        ? 'Question posée'
-        : 'Tâche terminée';
+  // Only notify when Claude needs attention
+  if (session.status !== 'needs_attention') {
+    console.log('[Notifications] Status is not needs_attention, skipping');
+    return;
+  }
+
+  // Get appropriate message based on attention reason
+  const body = session.attentionReason
+    ? notificationMessages[session.attentionReason]
+    : 'Claude a besoin de votre attention';
 
   const title = `${machineName} - ${session.project}`;
 
@@ -58,7 +73,7 @@ export function showSessionNotification(
   try {
     const notification = new Notification(title, {
       body,
-      tag: `${session.name}-${session.status}`,
+      tag: `${session.name}-${session.status}-${session.attentionReason || 'unknown'}`,
     });
 
     notification.onclick = () => {

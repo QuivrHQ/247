@@ -30,24 +30,21 @@ import { cloneRepo, extractProjectName } from './git.js';
 import config from '../config.json' with { type: 'json' };
 import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@claude-remote/shared';
 
-// Store session status from Claude Code hooks (more reliable than tmux heuristics)
-// 5 states: running (working), waiting (needs input), permission (needs auth), ended (terminated), idle (no hook data)
+import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+
+// Store session status from Claude Code hooks
+// Simplified to 3 states: working (active), needs_attention (user intervention needed), idle (no activity)
 interface HookStatus {
-  status: 'running' | 'waiting' | 'ended' | 'permission';
+  status: SessionStatus;
+  attentionReason?: AttentionReason;
   lastEvent: string;
   lastActivity: number;
   lastStatusChange: number; // Timestamp when status actually changed
   project?: string;
-  toolName?: string;
-  stopReason?: string;
 }
 
 // Store by tmux session name - single source of truth for status
-// NOTE: Removed claudeSessionStatus - redundant, only used tmux session name for per-session tracking
 const tmuxSessionStatus = new Map<string, HookStatus>();
-
-// Track pending tool executions to detect permission waiting
-const pendingTools = new Map<string, { toolName: string; timestamp: number }>();
 
 // Track active WebSocket connections per session
 const activeConnections = new Map<string, Set<WebSocket>>();
@@ -101,7 +98,6 @@ function cleanupStatusMaps() {
   const STALE_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours
 
   let cleanedTmux = 0;
-  let cleanedPending = 0;
 
   // Get active tmux sessions
   const { execSync } = require('child_process');
@@ -124,16 +120,8 @@ function cleanupStatusMaps() {
     }
   }
 
-  // Clean pendingTools
-  for (const [key, { timestamp }] of pendingTools) {
-    if ((now - timestamp) > STALE_THRESHOLD) {
-      pendingTools.delete(key);
-      cleanedPending++;
-    }
-  }
-
-  if (cleanedTmux > 0 || cleanedPending > 0) {
-    console.log(`[Status Cleanup] Removed ${cleanedTmux} tmux entries, ${cleanedPending} pending tools`);
+  if (cleanedTmux > 0) {
+    console.log(`[Status Cleanup] Removed ${cleanedTmux} stale status entries`);
   }
 }
 
@@ -286,24 +274,24 @@ export async function createServer() {
         switch (msg.type) {
           case 'input':
             terminal.write(msg.data);
-            // Update status to 'running' when user sends input from stopped/waiting state
-            // Don't overwrite permission status (user might just be accepting/rejecting)
+            // Update status to 'working' when user sends input
+            // This helps track when the user provides input that might resume Claude
             if (msg.data.includes('\r') || msg.data.includes('\n')) {
               const existing = tmuxSessionStatus.get(sessionName);
               const currentStatus = existing?.status;
 
-              // Only set to running if Claude was waiting for input
-              // Don't overwrite: running (already running), permission (user accepting/rejecting), ended
-              if (!currentStatus || currentStatus === 'waiting') {
+              // Only set to working if Claude was waiting for attention (input)
+              // Don't overwrite: working (already active), idle (no session)
+              if (currentStatus === 'needs_attention' && existing?.attentionReason === 'input') {
                 const now = Date.now();
                 tmuxSessionStatus.set(sessionName, {
-                  status: 'running',
+                  status: 'working',
                   lastEvent: 'UserInput',
                   lastActivity: now,
                   lastStatusChange: now,
                   project,
                 });
-                console.log(`[Status] Updated '${sessionName}' to 'running' (user input from ${currentStatus || 'unknown'})`);
+                console.log(`[Status] Updated '${sessionName}' to 'working' (user input)`);
               }
             }
             break;
@@ -513,84 +501,43 @@ export async function createServer() {
   });
 
   // Receive status updates from Claude Code hooks
+  // The hook script now sends pre-mapped status, making this endpoint simpler
   app.post('/api/hooks/status', (req, res) => {
-    const { event, session_id, tmux_session, project, notification_type, stop_reason, tool_name, timestamp } = req.body;
+    const { event, status, attention_reason, session_id, tmux_session, project, timestamp } = req.body;
 
     if (!event) {
       return res.status(400).json({ error: 'Missing event' });
     }
 
-    // Key for tracking pending tools (prefer tmux_session, fallback to session_id)
-    const trackingKey = tmux_session || session_id || project;
+    // Validate status
+    const validStatuses: SessionStatus[] = ['working', 'needs_attention', 'idle'];
+    const receivedStatus: SessionStatus = validStatuses.includes(status) ? status : 'working';
 
-    let status: HookStatus['status'] = 'running';
-
-    switch (event) {
-      case 'SessionStart':
-        status = 'running';
-        break;
-      case 'PreToolUse':
-        // Tool starting - still running (most tools are auto-approved)
-        status = 'running';
-        if (trackingKey) {
-          pendingTools.set(trackingKey, { toolName: tool_name, timestamp: timestamp || Date.now() });
-        }
-        break;
-      case 'PostToolUse':
-        // Tool completed - still running
-        status = 'running';
-        if (trackingKey) {
-          pendingTools.delete(trackingKey);
-        }
-        break;
-      case 'PermissionRequest':
-        // Claude is waiting for user to approve a tool
-        status = 'permission';
-        break;
-      case 'Stop':
-        status = 'waiting'; // Claude finished, waiting for next prompt
-        if (trackingKey) {
-          pendingTools.delete(trackingKey);
-        }
-        break;
-      case 'Notification':
-        if (notification_type === 'idle_prompt') {
-          status = 'waiting'; // Claude explicitly waiting for user input
-        }
-        break;
-      case 'SessionEnd':
-        status = 'ended';
-        if (trackingKey) {
-          pendingTools.delete(trackingKey);
-        }
-        break;
-    }
+    // Validate attention_reason if provided
+    const validReasons: AttentionReason[] = ['permission', 'input', 'plan_approval', 'task_complete'];
+    const receivedReason: AttentionReason | undefined =
+      attention_reason && validReasons.includes(attention_reason) ? attention_reason : undefined;
 
     const now = Date.now();
 
-    // Helper to create hookData with proper lastStatusChange tracking
-    const createHookData = (existingData: HookStatus | undefined): HookStatus => {
-      const statusChanged = !existingData || existingData.status !== status;
-      return {
-        status,
-        lastEvent: event,
-        lastActivity: timestamp || now,
-        lastStatusChange: statusChanged ? now : existingData.lastStatusChange,
-        project,
-        toolName: tool_name,
-        stopReason: stop_reason,
-      };
-    };
-
-    // Priority 1: Store by tmux session name (REQUIRED for per-session status)
+    // Store by tmux session name (REQUIRED for per-session status)
     if (tmux_session) {
       const existing = tmuxSessionStatus.get(tmux_session);
-      const hookData = createHookData(existing);
+      const statusChanged = !existing || existing.status !== receivedStatus;
+
+      const hookData: HookStatus = {
+        status: receivedStatus,
+        attentionReason: receivedReason,
+        lastEvent: event,
+        lastActivity: timestamp || now,
+        lastStatusChange: statusChanged ? now : existing.lastStatusChange,
+        project,
+      };
+
       tmuxSessionStatus.set(tmux_session, hookData);
 
       // Broadcast status update to WebSocket subscribers
       const [sessionProject] = tmux_session.split('--');
-      // Get environment info for this session
       const envId = getSessionEnvironment(tmux_session);
       const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
 
@@ -598,10 +545,11 @@ export async function createServer() {
         name: tmux_session,
         project: sessionProject || project,
         status: hookData.status,
+        attentionReason: hookData.attentionReason,
         statusSource: 'hook',
         lastEvent: hookData.lastEvent,
         lastStatusChange: hookData.lastStatusChange,
-        createdAt: timestamp || now, // Best approximation without querying tmux
+        createdAt: timestamp || now,
         lastActivity: undefined,
         environmentId: envId,
         environment: envMeta ? {
@@ -611,16 +559,13 @@ export async function createServer() {
           isDefault: envMeta.isDefault,
         } : undefined,
       });
+
+      console.log(`[Hook] ${tmux_session}: ${event} → ${receivedStatus}${receivedReason ? ` (${receivedReason})` : ''}`);
     } else {
       // Warning: tmux_session is required for proper per-session status tracking
       console.warn(`[Hook] WARNING: Missing tmux_session for ${event} (session_id=${session_id}, project=${project})`);
     }
 
-    // NOTE: Removed claudeSessionStatus and projectHookStatus storage
-    // Per-session tracking via tmux_session is now the single source of truth
-
-    const identifier = tmux_session || session_id || project;
-    console.log(`[Hook] ${identifier}: ${event} → ${status}${tool_name ? ` (${tool_name})` : ''}${!tmux_session ? ' (NO TMUX SESSION!)' : ''}`);
     res.json({ received: true });
   });
 
@@ -631,39 +576,22 @@ export async function createServer() {
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
 
-    interface SessionInfo {
-      name: string;
-      project: string;
-      createdAt: number;
-      status: 'running' | 'waiting' | 'ended' | 'idle' | 'permission';
-      statusSource: 'hook' | 'tmux';
-      lastActivity?: string;
-      lastEvent?: string;
-      lastStatusChange?: number;
-      environmentId?: string;
-      environment?: {
-        id: string;
-        name: string;
-        provider: 'anthropic' | 'openrouter';
-        isDefault: boolean;
-      };
-    }
-
     try {
       // Get session list with creation time
       const { stdout } = await execAsync(
         'tmux list-sessions -F "#{session_name}|#{session_created}" 2>/dev/null'
       );
 
-      const sessions: SessionInfo[] = [];
+      const sessions: WSSessionInfo[] = [];
 
       for (const line of stdout.trim().split('\n').filter(Boolean)) {
         const [name, created] = line.split('|');
-        // Extract project from session name (format: project--timestamp)
+        // Extract project from session name (format: project--adjective-noun-number)
         const [project] = name.split('--');
 
-        let status: SessionInfo['status'] = 'idle';
-        let statusSource: SessionInfo['statusSource'] = 'tmux';
+        let status: SessionStatus = 'idle';
+        let attentionReason: AttentionReason | undefined;
+        let statusSource: 'hook' | 'tmux' = 'tmux';
         let lastEvent: string | undefined;
         let lastStatusChange: number | undefined;
 
@@ -672,11 +600,11 @@ export async function createServer() {
 
         if (hookData) {
           status = hookData.status;
+          attentionReason = hookData.attentionReason;
           statusSource = 'hook';
           lastEvent = hookData.lastEvent;
           lastStatusChange = hookData.lastStatusChange;
         }
-        // No fallback - if no hook data, status remains 'idle'
 
         // Get environment info for this session
         const envId = getSessionEnvironment(name);
@@ -684,9 +612,10 @@ export async function createServer() {
 
         sessions.push({
           name,
-          project,  // Project is already extracted from session name
+          project,
           createdAt: parseInt(created) * 1000,
           status,
+          attentionReason,
           statusSource,
           lastActivity: '',
           lastEvent,
@@ -897,8 +826,9 @@ export async function createServer() {
               const [name, created] = line.split('|');
               const [project] = name.split('--');
 
-              let status: WSSessionInfo['status'] = 'idle';
-              let statusSource: WSSessionInfo['statusSource'] = 'tmux';
+              let status: SessionStatus = 'idle';
+              let attentionReason: AttentionReason | undefined;
+              let statusSource: 'hook' | 'tmux' = 'tmux';
               let lastEvent: string | undefined;
               let lastStatusChange: number | undefined;
 
@@ -906,17 +836,18 @@ export async function createServer() {
               const hookData = tmuxSessionStatus.get(name);
               if (hookData) {
                 status = hookData.status;
+                attentionReason = hookData.attentionReason;
                 statusSource = 'hook';
                 lastEvent = hookData.lastEvent;
                 lastStatusChange = hookData.lastStatusChange;
               }
-              // No fallback - if no hook data, status remains 'idle'
 
               sessions.push({
                 name,
                 project,
                 createdAt: parseInt(created) * 1000,
                 status,
+                attentionReason,
                 statusSource,
                 lastActivity: '',
                 lastEvent,
@@ -932,7 +863,6 @@ export async function createServer() {
             }
           } catch (err) {
             console.error('[Status WS] Failed to get initial sessions:', err);
-            // Only send error response if connection is still open
             if (ws.readyState === WebSocket.OPEN) {
               try {
                 const message: WSStatusMessageFromAgent = { type: 'sessions-list', sessions: [] };

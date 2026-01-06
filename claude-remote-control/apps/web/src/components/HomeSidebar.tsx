@@ -94,22 +94,19 @@ export function HomeSidebar({
     // Apply status filter
     if (filter !== 'all') {
       result = result.filter((s) => {
-        if (filter === 'active') return ['running', 'idle'].includes(s.status);
-        if (filter === 'waiting') return ['waiting', 'permission'].includes(s.status);
-        if (filter === 'done') return ['stopped', 'ended'].includes(s.status);
+        if (filter === 'active') return s.status === 'working';
+        if (filter === 'waiting') return s.status === 'needs_attention';
+        if (filter === 'done') return s.status === 'idle';
         return true;
       });
     }
 
-    // Sort: running first, then waiting/permission, then by createdAt
+    // Sort: needs_attention first, then working, then by createdAt
     return result.sort((a, b) => {
       const statusOrder: Record<string, number> = {
-        running: 0,
-        permission: 1,
-        waiting: 2,
-        stopped: 3,
-        idle: 4,
-        ended: 5,
+        needs_attention: 0,
+        working: 1,
+        idle: 2,
       };
       const orderA = statusOrder[a.status] ?? 10;
       const orderB = statusOrder[b.status] ?? 10;
@@ -122,8 +119,8 @@ export function HomeSidebar({
   const statusCounts = useMemo(() => {
     return sessions.reduce(
       (acc, s) => {
-        if (['running', 'idle'].includes(s.status)) acc.active++;
-        else if (['waiting', 'permission'].includes(s.status)) acc.waiting++;
+        if (s.status === 'working') acc.active++;
+        else if (s.status === 'needs_attention') acc.waiting++;
         else acc.done++;
         return acc;
       },

@@ -10,10 +10,12 @@ import {
   Clock,
   Zap,
   Activity,
+  FileText,
+  CheckCircle,
 } from 'lucide-react';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus } from '@/components/ui/status-badge';
+import { type SessionStatus, type AttentionReason } from '@claude-remote/shared';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +26,7 @@ interface ActivityItem {
   machineName: string;
   project: string;
   status: SessionStatus;
+  attentionReason?: AttentionReason;
   timestamp: number;
   statusSource?: 'hook' | 'tmux';
 }
@@ -42,29 +45,17 @@ const statusConfig: Record<
     label: string;
   }
 > = {
-  running: {
+  working: {
     icon: Loader2,
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/20',
-    label: 'Running',
+    label: 'Working',
   },
-  waiting: {
+  needs_attention: {
     icon: MessageSquare,
     color: 'text-orange-400',
     bgColor: 'bg-orange-500/20',
-    label: 'Waiting for input',
-  },
-  permission: {
-    icon: Shield,
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/20',
-    label: 'Permission needed',
-  },
-  ended: {
-    icon: Circle,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/20',
-    label: 'Ended',
+    label: 'Attention',
   },
   idle: {
     icon: Circle,
@@ -72,6 +63,21 @@ const statusConfig: Record<
     bgColor: 'bg-gray-500/20',
     label: 'Idle',
   },
+};
+
+// Icons for specific attention reasons
+const attentionIcons: Record<AttentionReason, typeof Loader2> = {
+  permission: Shield,
+  input: MessageSquare,
+  plan_approval: FileText,
+  task_complete: CheckCircle,
+};
+
+const attentionLabels: Record<AttentionReason, string> = {
+  permission: 'Permission',
+  input: 'Waiting',
+  plan_approval: 'Plan Ready',
+  task_complete: 'Done',
 };
 
 export function RecentActivityFeed({
@@ -94,6 +100,7 @@ export function RecentActivityFeed({
           machineName: machineData.machineName,
           project: session.project,
           status: session.status as SessionStatus,
+          attentionReason: session.attentionReason as AttentionReason | undefined,
           timestamp: session.lastStatusChange || session.createdAt,
           statusSource: session.statusSource,
         });
@@ -108,7 +115,7 @@ export function RecentActivityFeed({
 
   // Count items needing attention
   const needsAttentionCount = activityItems.filter(
-    (item) => item.status === 'waiting' || item.status === 'permission'
+    (item) => item.status === 'needs_attention'
   ).length;
 
   if (activityItems.length === 0) {
@@ -149,8 +156,15 @@ export function RecentActivityFeed({
         <AnimatePresence mode="popLayout">
           {activityItems.map((item, index) => {
             const config = statusConfig[item.status] || statusConfig.idle;
-            const Icon = config.icon;
-            const needsAttention = item.status === 'waiting' || item.status === 'permission';
+            // Use attention-specific icon if available
+            const Icon = item.status === 'needs_attention' && item.attentionReason
+              ? attentionIcons[item.attentionReason]
+              : config.icon;
+            // Use attention-specific label if available
+            const label = item.status === 'needs_attention' && item.attentionReason
+              ? attentionLabels[item.attentionReason]
+              : config.label;
+            const needsAttention = item.status === 'needs_attention';
 
             return (
               <motion.button
@@ -181,7 +195,7 @@ export function RecentActivityFeed({
                       className={cn(
                         'w-4 h-4',
                         config.color,
-                        item.status === 'running' && 'animate-spin'
+                        item.status === 'working' && 'animate-spin'
                       )}
                     />
                   </div>
@@ -219,7 +233,7 @@ export function RecentActivityFeed({
                         config.color
                       )}
                     >
-                      {config.label}
+                      {label}
                     </span>
                   </div>
                 </div>

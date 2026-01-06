@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { SessionCard } from './SessionCard';
 import { SessionPreviewPopover } from './SessionPreviewPopover';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus } from './ui/status-badge';
+import { type SessionStatus } from '@claude-remote/shared';
 import { cn } from '@/lib/utils';
 
 interface SessionSidebarProps {
@@ -95,24 +95,22 @@ export function SessionSidebar({
     // Apply status filter
     if (filter !== 'all') {
       result = result.filter((s) => {
-        if (filter === 'active') return ['running', 'idle'].includes(s.status);
-        if (filter === 'waiting') return ['waiting', 'permission'].includes(s.status);
-        if (filter === 'done') return ['ended'].includes(s.status);
+        if (filter === 'active') return s.status === 'working';
+        if (filter === 'waiting') return s.status === 'needs_attention';
+        if (filter === 'done') return s.status === 'idle';
         return true;
       });
     }
 
-    // Sort: running first, then waiting/permission, then by createdAt
+    // Sort: needs_attention first, then working, then by createdAt
     return result.sort((a, b) => {
-      const statusOrder: Record<string, number> = {
-        running: 0,
-        permission: 1,
-        waiting: 2,
-        idle: 3,
-        ended: 4,
+      const statusOrder: Record<SessionStatus, number> = {
+        needs_attention: 0,
+        working: 1,
+        idle: 2,
       };
-      const orderA = statusOrder[a.status] ?? 10;
-      const orderB = statusOrder[b.status] ?? 10;
+      const orderA = statusOrder[a.status as SessionStatus] ?? 10;
+      const orderB = statusOrder[b.status as SessionStatus] ?? 10;
       if (orderA !== orderB) return orderA - orderB;
       return b.createdAt - a.createdAt;
     });
@@ -122,8 +120,8 @@ export function SessionSidebar({
   const statusCounts = useMemo(() => {
     return sessions.reduce(
       (acc, s) => {
-        if (['running', 'idle'].includes(s.status)) acc.active++;
-        else if (['waiting', 'permission'].includes(s.status)) acc.waiting++;
+        if (s.status === 'working') acc.active++;
+        else if (s.status === 'needs_attention') acc.waiting++;
         else acc.done++;
         return acc;
       },

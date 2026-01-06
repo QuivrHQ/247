@@ -10,6 +10,16 @@ import { cn } from '@/lib/utils';
 
 export type ViewTab = 'environments' | 'guide';
 
+interface Machine {
+  id: string;
+  name: string;
+  status: string;
+  config?: {
+    projects: string[];
+    agentUrl?: string;
+  };
+}
+
 interface DashboardContentProps {
   // sessions prop removed as it's no longer needed for the list
   machines: Machine[];

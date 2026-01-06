@@ -18,7 +18,7 @@ interface TerminalProps {
   environmentId?: string;
   onConnectionChange?: (connected: boolean) => void;
   onSessionCreated?: (sessionName: string) => void;
-  claudeStatus?: 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
+  claudeStatus?: 'working' | 'needs_attention' | 'idle';
 }
 
 // Generate human-readable session names with project prefix (same as agent)
@@ -406,8 +406,8 @@ export function Terminal({ agentUrl, project, sessionName, environmentId, onConn
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Start Claude Button - hidden when Claude is running */}
-          {claudeStatus !== 'running' && (
+          {/* Start Claude Button - hidden when Claude is working */}
+          {claudeStatus !== 'working' && (
             <button
               onClick={startClaude}
               disabled={!connected}

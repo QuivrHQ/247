@@ -163,7 +163,7 @@ export default function Home() {
   // Stats
   const allSessions = getAllSessions();
   const needsAttention = allSessions.filter(
-    (s) => s.status === 'waiting' || s.status === 'permission'
+    (s) => s.status === 'needs_attention'
   ).length;
 
   // Get agent URL for selected session

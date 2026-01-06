@@ -151,7 +151,8 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
 
       for (const session of newSessions) {
         const prevSession = prevSessions.find((s) => s.name === session.name);
-        const isActionable = ['permission', 'waiting'].includes(session.status);
+        // Only notify when status is 'needs_attention'
+        const isActionable = session.status === 'needs_attention';
 
         const isNewEvent =
           !prevSession ||
@@ -159,7 +160,7 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
             session.lastStatusChange !== prevSession.lastStatusChange);
 
         if (isNewEvent && isActionable) {
-          console.log('[Notifications] TRIGGERING notification for:', session.name, session.status);
+          console.log('[Notifications] TRIGGERING notification for:', session.name, session.status, session.attentionReason);
           showSessionNotification(machineId, machineName, session);
         }
       }

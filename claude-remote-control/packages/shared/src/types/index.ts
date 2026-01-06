@@ -49,8 +49,16 @@ export type WSMessageFromAgent =
   | { type: 'history'; data: string; lines: number };
 
 // Session status types for real-time updates
-// 5 states: running (working), waiting (needs input), permission (needs auth), ended (terminated), idle (no hook data)
-export type SessionStatus = 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
+// Simplified to 3 states: working (active), needs_attention (user intervention needed), idle (no activity)
+export type SessionStatus = 'working' | 'needs_attention' | 'idle';
+
+// Reason why Claude needs attention
+export type AttentionReason =
+  | 'permission'      // Claude needs permission to use a tool
+  | 'input'           // Claude is waiting for user input
+  | 'plan_approval'   // Claude has a plan to approve (ExitPlanMode)
+  | 'task_complete';  // Claude finished the task
+
 export type StatusSource = 'hook' | 'tmux';
 
 // Session info for status WebSocket
@@ -58,6 +66,7 @@ export interface WSSessionInfo {
   name: string;
   project: string;
   status: SessionStatus;
+  attentionReason?: AttentionReason; // Why Claude needs attention (only set when status is 'needs_attention')
   statusSource: StatusSource;
   lastEvent?: string;
   lastStatusChange?: number;

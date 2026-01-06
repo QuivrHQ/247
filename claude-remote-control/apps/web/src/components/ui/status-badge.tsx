@@ -8,47 +8,53 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
 
-export type SessionStatus = 'running' | 'waiting' | 'permission' | 'ended' | 'idle';
+// Re-export types for convenience
+export type { SessionStatus, AttentionReason };
 
 const statusConfig: Record<
   SessionStatus,
   { label: string; description: string; className: string; dotClassName: string }
 > = {
-  running: {
-    label: 'Running',
-    description: 'Claude is actively working on the task',
+  working: {
+    label: 'Working',
+    description: 'Claude is actively processing',
     className: 'bg-blue-500/15 text-blue-300 border border-blue-500/40',
     dotClassName: 'bg-blue-400 animate-pulse',
   },
-  waiting: {
-    label: 'Waiting',
-    description: 'Claude is waiting for your input',
+  needs_attention: {
+    label: 'Attention',
+    description: 'Claude needs your input',
     className: 'bg-orange-500/15 text-orange-300 border border-orange-500/40',
-    dotClassName: 'bg-orange-400',
-  },
-  permission: {
-    label: 'Permission',
-    description: 'Claude needs your authorization to proceed',
-    className: 'bg-purple-500/15 text-purple-300 border border-purple-500/40',
-    dotClassName: 'bg-purple-400 animate-pulse',
-  },
-  ended: {
-    label: 'Ended',
-    description: 'Session has ended',
-    className: 'bg-gray-500/15 text-gray-400 border border-gray-500/40',
-    dotClassName: 'bg-gray-500',
+    dotClassName: 'bg-orange-400 animate-pulse',
   },
   idle: {
     label: 'Idle',
-    description: 'Session is idle, no active task',
+    description: 'No active Claude session',
     className: 'bg-gray-500/15 text-gray-400 border border-gray-500/40',
     dotClassName: 'bg-gray-400',
   },
 };
 
+// More specific descriptions based on attention reason
+const attentionDescriptions: Record<AttentionReason, string> = {
+  permission: 'Claude needs permission to use a tool',
+  input: 'Claude is waiting for your input',
+  plan_approval: 'Claude has a plan to approve',
+  task_complete: 'Claude has finished the task',
+};
+
+const attentionLabels: Record<AttentionReason, string> = {
+  permission: 'Permission',
+  input: 'Waiting',
+  plan_approval: 'Plan Ready',
+  task_complete: 'Done',
+};
+
 export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   status: SessionStatus;
+  attentionReason?: AttentionReason;
   showDot?: boolean;
   showLabel?: boolean;
   showTooltip?: boolean;
@@ -57,6 +63,7 @@ export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> 
 
 export function StatusBadge({
   status,
+  attentionReason,
   showDot = true,
   showLabel = true,
   showTooltip = true,
@@ -67,10 +74,20 @@ export function StatusBadge({
   const config = statusConfig[status];
   const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm';
 
+  // Use attention-specific label if available
+  const label = status === 'needs_attention' && attentionReason
+    ? attentionLabels[attentionReason]
+    : config.label;
+
+  // Use attention-specific description if available
+  const description = status === 'needs_attention' && attentionReason
+    ? attentionDescriptions[attentionReason]
+    : config.description;
+
   const badge = (
     <span
       role="status"
-      aria-label={`Status: ${config.label}`}
+      aria-label={`Status: ${label}`}
       className={cn(
         'inline-flex items-center gap-1.5 rounded font-medium transition-colors',
         'hover:brightness-110',
@@ -86,7 +103,7 @@ export function StatusBadge({
           aria-hidden="true"
         />
       )}
-      {showLabel && config.label}
+      {showLabel && label}
     </span>
   );
 
@@ -97,8 +114,8 @@ export function StatusBadge({
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
-          <p className="font-medium">{config.label}</p>
-          <p className="text-xs text-muted-foreground">{config.description}</p>
+          <p className="font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -116,10 +133,8 @@ export function CountBadge({ status, count, showTooltip = true, className, ...pr
 
   const config = statusConfig[status];
   const labels: Record<SessionStatus, string> = {
-    running: 'running',
-    waiting: 'waiting',
-    permission: 'permission',
-    ended: 'ended',
+    working: 'working',
+    needs_attention: 'need attention',
     idle: 'idle',
   };
 

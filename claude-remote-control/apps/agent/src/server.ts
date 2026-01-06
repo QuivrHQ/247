@@ -390,6 +390,37 @@ export function createServer() {
     }
   });
 
+  // Get terminal preview (last N lines from tmux pane)
+  app.get('/api/sessions/:sessionName/preview', async (req, res) => {
+    const { sessionName } = req.params;
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    // Validate session name format to prevent injection
+    if (!/^[\w-]+$/.test(sessionName)) {
+      return res.status(400).json({ error: 'Invalid session name' });
+    }
+
+    try {
+      // Capture last 20 lines from the tmux pane
+      const { stdout } = await execAsync(
+        `tmux capture-pane -t "${sessionName}" -p -S -20 2>/dev/null`
+      );
+
+      // Split into lines and take last 15 non-empty lines for display
+      const allLines = stdout.split('\n');
+      const lines = allLines.slice(-16, -1).filter(line => line.trim() !== '' || allLines.indexOf(line) > allLines.length - 5);
+
+      res.json({
+        lines: lines.length > 0 ? lines : ['(empty terminal)'],
+        timestamp: Date.now()
+      });
+    } catch {
+      res.status(404).json({ error: 'Session not found' });
+    }
+  });
+
   // Kill a tmux session
   app.delete('/api/sessions/:sessionName', async (req, res) => {
     const { sessionName } = req.params;

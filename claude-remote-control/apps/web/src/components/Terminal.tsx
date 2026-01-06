@@ -8,12 +8,15 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { CanvasAddon } from '@xterm/addon-canvas';
 import '@xterm/xterm/css/xterm.css';
-import { Search, ChevronUp, ChevronDown, X, ArrowDown } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, X, ArrowDown, Sparkles, Copy, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TerminalProps {
   agentUrl: string;
   project: string;
   sessionName?: string;
+  onConnectionChange?: (connected: boolean) => void;
+  claudeStatus?: 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
 }
 
 // Generate human-readable session names with project prefix (same as agent)
@@ -26,13 +29,14 @@ function generateSessionName(project: string): string {
   return `${project}--${adj}-${noun}-${num}`;
 }
 
-export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
+export function Terminal({ agentUrl, project, sessionName, onConnectionChange, claudeStatus }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [connected, setConnected] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -47,6 +51,11 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   }
   const effectiveSessionName = sessionName || generatedSessionRef.current || '';
 
+  // Notify parent of connection changes
+  useEffect(() => {
+    onConnectionChange?.(connected);
+  }, [connected, onConnectionChange]);
+
   // Scroll to bottom handler
   const scrollToBottom = useCallback(() => {
     if (xtermRef.current) {
@@ -57,6 +66,18 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   // Focus terminal to enable native scroll handling
   const focusTerminal = useCallback(() => {
     xtermRef.current?.focus();
+  }, []);
+
+  // Copy terminal selection
+  const copySelection = useCallback(() => {
+    if (xtermRef.current) {
+      const selection = xtermRef.current.getSelection();
+      if (selection) {
+        navigator.clipboard.writeText(selection);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    }
   }, []);
 
   // Search handlers
@@ -137,17 +158,41 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
       term = new XTerm({
         cursorBlink: true,
         fontSize: 14,
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        fontFamily: '"JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
+        fontWeight: '400',
+        fontWeightBold: '600',
+        letterSpacing: 0,
+        lineHeight: 1.2,
         scrollback: 15000,
         scrollSensitivity: 1,
         fastScrollSensitivity: 5,
         fastScrollModifier: 'alt',
         smoothScrollDuration: 100,
+        cursorStyle: 'bar',
+        cursorWidth: 2,
         theme: {
-          background: '#1a1a2e',
-          foreground: '#eee',
+          background: '#0a0a10',
+          foreground: '#e4e4e7',
           cursor: '#f97316',
-          selectionBackground: '#44475a',
+          cursorAccent: '#0a0a10',
+          selectionBackground: 'rgba(249, 115, 22, 0.3)',
+          selectionForeground: '#ffffff',
+          black: '#18181b',
+          red: '#f87171',
+          green: '#4ade80',
+          yellow: '#fbbf24',
+          blue: '#60a5fa',
+          magenta: '#c084fc',
+          cyan: '#22d3ee',
+          white: '#e4e4e7',
+          brightBlack: '#52525b',
+          brightRed: '#fca5a5',
+          brightGreen: '#86efac',
+          brightYellow: '#fde047',
+          brightBlue: '#93c5fd',
+          brightMagenta: '#d8b4fe',
+          brightCyan: '#67e8f9',
+          brightWhite: '#fafafa',
         },
       });
 
@@ -202,7 +247,7 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
       currentWs.onopen = () => {
         if (cancelled) return;
         setConnected(true);
-        currentTerm.write('\r\n\x1b[32mConnected to ' + agentUrl + '\x1b[0m\r\n\r\n');
+        currentTerm.write('\x1b[38;5;245m┌─ Connected to ' + agentUrl + ' ─┐\x1b[0m\r\n\r\n');
 
         currentWs.send(
           JSON.stringify({
@@ -231,13 +276,13 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
       currentWs.onclose = () => {
         if (cancelled) return;
         setConnected(false);
-        currentTerm.write('\r\n\x1b[31mDisconnected\x1b[0m\r\n');
+        currentTerm.write('\r\n\x1b[38;5;245m└─ Disconnected ─┘\x1b[0m\r\n');
       };
 
       currentWs.onerror = (err) => {
         if (cancelled) return;
         console.error('WebSocket error:', err);
-        currentTerm.write('\r\n\x1b[31mConnection error\x1b[0m\r\n');
+        currentTerm.write('\r\n\x1b[31m✗ Connection error\x1b[0m\r\n');
       };
 
       currentTerm.onData((data) => {
@@ -301,78 +346,134 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
   };
 
   return (
-    <div className="flex flex-col flex-1 relative">
+    <div className="flex flex-col flex-1 relative overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-4 p-2 bg-gray-800 border-b border-gray-700">
-        <span
-          className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}
-        />
-        <span className="text-sm text-gray-300">{project}</span>
-        <button
-          onClick={startClaude}
-          disabled={!connected}
-          className="px-3 py-1 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 text-white rounded text-sm transition"
-        >
-          Start Claude
-        </button>
+      <div
+        className={cn(
+          'flex items-center gap-3 px-4 py-2',
+          'bg-[#0d0d14]/80 backdrop-blur-sm',
+          'border-b border-white/5'
+        )}
+      >
+        {/* Project & Session Info */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-white/60">{project}</span>
+          <span className="text-white/20">/</span>
+          <span className="text-sm font-mono text-white/40">
+            {effectiveSessionName.split('--')[1] || 'new session'}
+          </span>
+        </div>
 
         <div className="flex-1" />
 
-        {/* Search button */}
-        <button
-          onClick={() => {
-            setSearchVisible(!searchVisible);
-            if (!searchVisible) {
-              setTimeout(() => searchInputRef.current?.focus(), 0);
-            }
-          }}
-          className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition"
-          title="Search (Ctrl+Shift+F)"
-        >
-          <Search className="w-4 h-4" />
-        </button>
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {/* Start Claude Button - hidden when Claude is running */}
+          {claudeStatus !== 'running' && (
+            <button
+              onClick={startClaude}
+              disabled={!connected}
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 rounded-lg',
+                'text-sm font-medium transition-all',
+                connected
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/20'
+                  : 'bg-white/5 text-white/30 cursor-not-allowed'
+              )}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Start Claude</span>
+            </button>
+          )}
+
+          {/* Copy Button */}
+          <button
+            onClick={copySelection}
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              'text-white/40 hover:text-white hover:bg-white/5'
+            )}
+            title="Copy selection"
+          >
+            {copied ? (
+              <Check className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Search Button */}
+          <button
+            onClick={() => {
+              setSearchVisible(!searchVisible);
+              if (!searchVisible) {
+                setTimeout(() => searchInputRef.current?.focus(), 0);
+              }
+            }}
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              searchVisible
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+            )}
+            title="Search (⌘⇧F)"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}
       {searchVisible && (
-        <div className="flex items-center gap-2 p-2 bg-gray-800 border-b border-gray-700">
-          <Search className="w-4 h-4 text-gray-400" />
+        <div
+          className={cn(
+            'flex items-center gap-2 px-4 py-2',
+            'bg-[#0d0d14]/90 backdrop-blur-sm',
+            'border-b border-white/5'
+          )}
+        >
+          <Search className="w-4 h-4 text-white/30" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search..."
-            className="flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-orange-500 focus:outline-none"
+            placeholder="Search in terminal..."
+            className={cn(
+              'flex-1 bg-transparent text-sm text-white placeholder:text-white/30',
+              'focus:outline-none'
+            )}
           />
-          <button
-            onClick={findPrevious}
-            className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
-            title="Previous (Shift+Enter)"
-          >
-            <ChevronUp className="w-4 h-4" />
-          </button>
-          <button
-            onClick={findNext}
-            className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
-            title="Next (Enter)"
-          >
-            <ChevronDown className="w-4 h-4" />
-          </button>
-          <button
-            onClick={closeSearch}
-            className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
-            title="Close (Esc)"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={findPrevious}
+              className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+              title="Previous (⇧↵)"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <button
+              onClick={findNext}
+              className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+              title="Next (↵)"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            <button
+              onClick={closeSearch}
+              className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+              title="Close (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
       {/* Terminal */}
       <div
         ref={terminalRef}
-        className="flex-1 bg-[#1a1a2e]"
+        className="flex-1 bg-[#0a0a10] px-2 py-1"
         onClick={focusTerminal}
         onMouseEnter={focusTerminal}
       />
@@ -381,7 +482,13 @@ export function Terminal({ agentUrl, project, sessionName }: TerminalProps) {
       {!isAtBottom && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 p-2 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg transition-all animate-bounce"
+          className={cn(
+            'absolute bottom-6 right-6 p-3',
+            'bg-orange-500/90 hover:bg-orange-400 backdrop-blur-sm',
+            'text-white rounded-full shadow-xl shadow-orange-500/30',
+            'transition-all hover:scale-105 active:scale-95',
+            'animate-bounce'
+          )}
           title="Scroll to bottom"
         >
           <ArrowDown className="w-5 h-5" />

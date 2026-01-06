@@ -1,12 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Monitor,
+  Wifi,
+  WifiOff,
+  Settings,
+  Bell,
+  BellOff,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+} from 'lucide-react';
+import Link from 'next/link';
 import { Terminal } from '@/components/Terminal';
+import { SessionSidebar } from '@/components/SessionSidebar';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, AlertTriangle, Monitor } from 'lucide-react';
-import Link from 'next/link';
+import { StatusBadge, type SessionStatus } from '@/components/ui/status-badge';
+import { type SessionInfo } from '@/lib/notifications';
+import { cn } from '@/lib/utils';
 
 interface Machine {
   id: string;
@@ -18,16 +35,20 @@ interface Machine {
   };
 }
 
-interface SessionInfo {
-  name: string;
-  project: string;
-  createdAt: number;
-  status: string;
+// Generate human-readable session names (duplicated from Terminal for preview)
+function generateSessionName(project: string): string {
+  const adjectives = ['brave', 'swift', 'calm', 'bold', 'wise', 'keen', 'fair', 'wild', 'bright', 'cool'];
+  const nouns = ['lion', 'hawk', 'wolf', 'bear', 'fox', 'owl', 'deer', 'lynx', 'eagle', 'tiger'];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 100);
+  return `${project}--${adj}-${noun}-${num}`;
 }
 
 export default function TerminalPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const machineId = params.machineId as string;
 
   const urlProject = searchParams.get('project');
@@ -40,10 +61,18 @@ export default function TerminalPage() {
   const [selectedSession, setSelectedSession] = useState<string>(urlSession || '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const agentUrl = machine?.config?.agentUrl || 'localhost:4678';
 
-  // Sync URL params to state (handles hydration and navigation)
+  // Current session info
+  const currentSessionInfo = useMemo(() => {
+    return sessions.find((s) => s.name === selectedSession);
+  }, [sessions, selectedSession]);
+
+  // Sync URL params to state
   useEffect(() => {
     if (urlProject && urlProject !== selectedProject) {
       setSelectedProject(urlProject);
@@ -53,6 +82,18 @@ export default function TerminalPage() {
     }
   }, [urlProject, urlSession]);
 
+  // Update URL when session changes
+  const updateUrl = useCallback(
+    (session: string | null, project: string) => {
+      const params = new URLSearchParams();
+      if (project) params.set('project', project);
+      if (session) params.set('session', session);
+      router.replace(`/terminal/${machineId}?${params.toString()}`, { scroll: false });
+    },
+    [machineId, router]
+  );
+
+  // Fetch machine data
   useEffect(() => {
     fetch(`/api/machines/${machineId}`)
       .then((r) => {
@@ -69,182 +110,362 @@ export default function TerminalPage() {
       .finally(() => setLoading(false));
   }, [machineId, urlProject]);
 
+  // Fetch projects and sessions
   useEffect(() => {
     if (!machine) return;
 
     const url = machine.config?.agentUrl || 'localhost:4678';
     const protocol = url.includes('localhost') ? 'http' : 'https';
 
-    fetch(`${protocol}://${url}/api/projects`)
-      .then((r) => r.json())
-      .then((p: string[]) => {
-        setProjects(p);
-        if (!selectedProject && p.length > 0) {
-          setSelectedProject(p[0]);
-        }
-      })
-      .catch(console.error);
+    const fetchData = async () => {
+      try {
+        const [projectsRes, sessionsRes] = await Promise.all([
+          fetch(`${protocol}://${url}/api/projects`),
+          fetch(`${protocol}://${url}/api/sessions`),
+        ]);
 
-    fetch(`${protocol}://${url}/api/sessions`)
-      .then((r) => r.json())
-      .then((s: SessionInfo[]) => setSessions(s))
-      .catch(() => setSessions([]));
+        if (projectsRes.ok) {
+          const p: string[] = await projectsRes.json();
+          setProjects(p);
+          if (!selectedProject && p.length > 0) {
+            setSelectedProject(p[0]);
+          }
+        }
+
+        if (sessionsRes.ok) {
+          const s: SessionInfo[] = await sessionsRes.json();
+          setSessions(s);
+        }
+      } catch (e) {
+        console.error('Failed to fetch data:', e);
+      }
+    };
+
+    fetchData();
+
+    // Poll for sessions every 3s
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
   }, [machine, selectedProject]);
 
+  // Handle session selection
+  const handleSelectSession = useCallback(
+    (sessionName: string | null, project: string) => {
+      setSelectedProject(project);
+      setSelectedSession(sessionName || '');
+      updateUrl(sessionName, project);
+    },
+    [updateUrl]
+  );
+
+  // Handle new session creation
+  const handleNewSession = useCallback(
+    (project: string) => {
+      setSelectedProject(project);
+      setSelectedSession('');
+      updateUrl(null, project);
+    },
+    [updateUrl]
+  );
+
+  // Toggle fullscreen
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
   if (loading) {
-    return (
-      <div className="h-screen flex flex-col bg-background">
-        <header className="bg-card border-b border-border">
-          <div className="px-4 py-3 flex items-center gap-4 border-b border-border/50">
-            <Skeleton className="h-6 w-16" />
-            <div className="h-5 w-px bg-border" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="w-8 h-8 rounded-lg" />
-              <div className="space-y-1">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-            <div className="flex-1" />
-            <Skeleton className="h-7 w-24 rounded-full" />
-          </div>
-          <div className="px-4 py-2.5 flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-14" />
-              <Skeleton className="h-8 w-44 rounded-md" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-14" />
-              <Skeleton className="h-8 w-44 rounded-md" />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <Skeleton className="h-4 w-48 mx-auto" />
-            <Skeleton className="h-4 w-32 mx-auto" />
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (error || !machine) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background p-4">
-        <Card className="p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-destructive" />
-          </div>
-          <h2 className="text-xl font-semibold mb-2">Machine not found</h2>
-          <p className="text-muted-foreground mb-4">
-            {error || 'The machine you are looking for does not exist or is unavailable.'}
-          </p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-primary hover:underline"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to dashboard
-          </Link>
-        </Card>
-      </div>
-    );
+    return <ErrorState error={error} />;
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <header className="bg-card border-b border-border">
-        {/* Top row: Navigation & Machine info */}
-        <div className="px-4 py-3 flex items-center gap-4 border-b border-border/50">
+    <div
+      className={cn(
+        'h-screen flex flex-col overflow-hidden',
+        'bg-gradient-to-br from-[#0a0a10] via-[#0d0d14] to-[#0a0a10]'
+      )}
+    >
+      {/* Top Header */}
+      <header
+        className={cn(
+          'flex items-center justify-between px-4 py-2.5',
+          'bg-[#0d0d14]/80 backdrop-blur-xl',
+          'border-b border-white/5'
+        )}
+      >
+        {/* Left: Navigation & Machine Info */}
+        <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors flex items-center gap-2 px-2 py-1 rounded-md -ml-2"
-            aria-label="Back to dashboard"
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg',
+              'text-white/50 hover:text-white hover:bg-white/5',
+              'transition-all group'
+            )}
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             <span className="text-sm font-medium">Back</span>
           </Link>
 
-          <div className="h-5 w-px bg-border" aria-hidden="true" />
+          <div className="h-5 w-px bg-white/10" />
 
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Monitor className="w-4 h-4 text-primary" />
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center',
+                'bg-gradient-to-br from-orange-500/20 to-amber-500/20',
+                'border border-orange-500/20'
+              )}
+            >
+              <Monitor className="w-5 h-5 text-orange-400" />
             </div>
             <div>
-              <h1 className="text-base font-semibold leading-tight">{machine.name}</h1>
-              <p className="text-xs text-muted-foreground font-mono">{agentUrl}</p>
+              <h1 className="text-base font-semibold text-white">{machine.name}</h1>
+              <p className="text-xs text-white/40 font-mono">{agentUrl}</p>
             </div>
-          </div>
-
-          <div className="flex-1" />
-
-          {/* Connection status */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-medium text-green-400">Connected</span>
           </div>
         </div>
 
-        {/* Bottom row: Project & Session selectors */}
-        <div className="px-4 py-2.5 flex items-center gap-6 bg-card/50">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="project-select"
-              className="text-sm font-medium text-muted-foreground"
+        {/* Center: Current Session Info */}
+        <AnimatePresence mode="wait">
+          {currentSessionInfo && (
+            <motion.div
+              key={currentSessionInfo.name}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="flex items-center gap-3"
             >
-              Project:
-            </label>
-            <select
-              id="project-select"
-              value={selectedProject}
-              onChange={(e) => {
-                setSelectedProject(e.target.value);
-                setSelectedSession('');
-              }}
-              className="bg-secondary hover:bg-secondary/80 text-foreground px-3 py-1.5 rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring transition-colors min-w-[180px]"
-            >
-              {projects.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+              <StatusBadge
+                status={currentSessionInfo.status as SessionStatus}
+                size="md"
+                showTooltip
+              />
+              <span className="text-sm text-white/60 font-mono">
+                {currentSessionInfo.name.split('--')[1] || currentSessionInfo.name}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {/* Connection Status */}
+          <div
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-full',
+              'text-xs font-medium',
+              isConnected
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+            )}
+          >
+            {isConnected ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span>Connected</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-3 h-3" />
+                <span>Disconnected</span>
+              </>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="session-select"
-              className="text-sm font-medium text-muted-foreground"
-            >
-              Session:
-            </label>
-            <select
-              id="session-select"
-              value={selectedSession}
-              onChange={(e) => setSelectedSession(e.target.value)}
-              className="bg-secondary hover:bg-secondary/80 text-foreground px-3 py-1.5 rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring transition-colors min-w-[180px]"
-            >
-              <option value="">+ New session</option>
-              {sessions.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.name.split('--')[1] || s.project} ({s.status})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Notifications Toggle */}
+          <button
+            onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              notificationsEnabled
+                ? 'text-white/60 hover:text-white hover:bg-white/5'
+                : 'text-white/30 hover:text-white/50 hover:bg-white/5'
+            )}
+            title={notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled'}
+          >
+            {notificationsEnabled ? (
+              <Bell className="w-4 h-4" />
+            ) : (
+              <BellOff className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </header>
 
-      {selectedProject && (
-        <Terminal
-          key={`${selectedProject}-${selectedSession || 'new'}`}
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Session Sidebar */}
+        <SessionSidebar
+          sessions={sessions}
+          projects={projects}
+          currentSessionName={selectedSession || null}
+          currentProject={selectedProject}
+          onSelectSession={handleSelectSession}
+          onNewSession={handleNewSession}
           agentUrl={agentUrl}
-          project={selectedProject}
-          sessionName={selectedSession || undefined}
         />
-      )}
+
+        {/* Terminal Area */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {selectedProject ? (
+            <Terminal
+              key={`${selectedProject}-${selectedSession || 'new'}`}
+              agentUrl={agentUrl}
+              project={selectedProject}
+              sessionName={selectedSession || undefined}
+              onConnectionChange={setIsConnected}
+              claudeStatus={currentSessionInfo?.status}
+            />
+          ) : (
+            <EmptyState onSelectProject={(p) => handleNewSession(p)} projects={projects} />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// Loading skeleton
+function LoadingSkeleton() {
+  return (
+    <div className="h-screen flex flex-col bg-[#0a0a10]">
+      <header className="bg-[#0d0d14] border-b border-white/5">
+        <div className="px-4 py-3 flex items-center gap-4">
+          <Skeleton className="h-6 w-16 bg-white/5" />
+          <div className="h-5 w-px bg-white/10" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-10 h-10 rounded-xl bg-white/5" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-4 w-32 bg-white/5" />
+              <Skeleton className="h-3 w-24 bg-white/5" />
+            </div>
+          </div>
+          <div className="flex-1" />
+          <Skeleton className="h-8 w-24 rounded-full bg-white/5" />
+        </div>
+      </header>
+      <div className="flex-1 flex">
+        <div className="w-80 border-r border-white/5 p-4 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-xl bg-white/5" />
+          ))}
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <Skeleton className="h-6 w-48 mx-auto bg-white/5" />
+            <Skeleton className="h-4 w-32 mx-auto bg-white/5" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Error state
+function ErrorState({ error }: { error: string | null }) {
+  return (
+    <div className="h-screen flex items-center justify-center bg-[#0a0a10] p-4">
+      <Card className="p-8 text-center max-w-md bg-[#12121a] border-white/10">
+        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="w-8 h-8 text-red-400" />
+        </div>
+        <h2 className="text-xl font-semibold text-white mb-2">Machine not found</h2>
+        <p className="text-white/50 mb-6">
+          {error || 'The machine you are looking for does not exist or is unavailable.'}
+        </p>
+        <Link
+          href="/"
+          className={cn(
+            'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
+            'bg-orange-500 hover:bg-orange-400 text-white font-medium',
+            'transition-colors'
+          )}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to dashboard
+        </Link>
+      </Card>
+    </div>
+  );
+}
+
+// Empty state when no project selected
+function EmptyState({
+  onSelectProject,
+  projects,
+}: {
+  onSelectProject: (project: string) => void;
+  projects: string[];
+}) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="text-center max-w-md">
+        <div
+          className={cn(
+            'w-20 h-20 rounded-2xl mx-auto mb-6',
+            'bg-gradient-to-br from-orange-500/20 to-amber-500/20',
+            'border border-orange-500/20',
+            'flex items-center justify-center'
+          )}
+        >
+          <Monitor className="w-10 h-10 text-orange-400" />
+        </div>
+        <h2 className="text-xl font-semibold text-white mb-2">Select a project</h2>
+        <p className="text-white/50 mb-6">
+          Choose a project from the sidebar or create a new session to get started.
+        </p>
+        {projects.length > 0 && (
+          <div className="flex flex-wrap gap-2 justify-center">
+            {projects.slice(0, 5).map((project) => (
+              <button
+                key={project}
+                onClick={() => onSelectProject(project)}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-sm font-medium',
+                  'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white',
+                  'border border-white/10 hover:border-white/20',
+                  'transition-all'
+                )}
+              >
+                {project}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

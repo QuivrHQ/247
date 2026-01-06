@@ -7,6 +7,7 @@ export interface SessionInfo {
   lastActivity?: string;
   lastEvent?: string;
   lastStatusChange?: number;
+  environmentId?: string;
 }
 
 export function requestNotificationPermission(): void {
@@ -54,11 +55,7 @@ export function showSessionNotification(
     });
 
     notification.onclick = () => {
-      const params = new URLSearchParams({
-        project: session.project,
-        session: session.name,
-      });
-      const url = `/terminal/${machineId}?${params.toString()}`;
+      const url = `/s/${machineId}/${encodeURIComponent(session.name)}`;
 
       window.focus();
       window.location.href = url;

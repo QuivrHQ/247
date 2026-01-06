@@ -62,6 +62,7 @@ export interface WSSessionInfo {
   lastStatusChange?: number;
   createdAt: number;
   lastActivity?: string;
+  environmentId?: string; // Track which environment this session uses
 }
 
 // WebSocket message types - Client to Agent (Status channel)
@@ -106,6 +107,69 @@ export interface EditorStatus {
   startedAt?: number;
   lastActivity?: number;
 }
+
+// Environment types
+export type EnvironmentProvider = 'anthropic' | 'openrouter';
+
+export interface Environment {
+  id: string;
+  name: string;
+  provider: EnvironmentProvider;
+  isDefault: boolean;
+  variables: Record<string, string>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Safe metadata sent to dashboard (no secret values)
+export interface EnvironmentMetadata {
+  id: string;
+  name: string;
+  provider: EnvironmentProvider;
+  isDefault: boolean;
+  variableKeys: string[]; // Only variable names, not values
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Environment API request types
+export interface CreateEnvironmentRequest {
+  name: string;
+  provider: EnvironmentProvider;
+  isDefault?: boolean;
+  variables: Record<string, string>;
+}
+
+export interface UpdateEnvironmentRequest {
+  name?: string;
+  provider?: EnvironmentProvider;
+  isDefault?: boolean;
+  variables?: Record<string, string>;
+}
+
+// Provider presets for UI
+export const ENVIRONMENT_PRESETS: Record<EnvironmentProvider, {
+  label: string;
+  defaultVariables: Record<string, string>;
+  description: string;
+}> = {
+  anthropic: {
+    label: 'Anthropic',
+    defaultVariables: {
+      ANTHROPIC_API_KEY: '',
+    },
+    description: 'Direct Anthropic API access',
+  },
+  openrouter: {
+    label: 'OpenRouter',
+    defaultVariables: {
+      ANTHROPIC_BASE_URL: 'https://openrouter.ai/api',
+      ANTHROPIC_AUTH_TOKEN: '',
+      ANTHROPIC_API_KEY: '', // Must be explicitly empty
+    },
+    description: 'Use OpenRouter as Claude provider',
+  },
+};
 
 // Agent configuration
 export interface AgentConfig {

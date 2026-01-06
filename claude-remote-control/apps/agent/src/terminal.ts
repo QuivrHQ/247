@@ -15,7 +15,11 @@ export interface Terminal {
   isExistingSession(): boolean;
 }
 
-export function createTerminal(cwd: string, sessionName: string): Terminal {
+export function createTerminal(
+  cwd: string,
+  sessionName: string,
+  customEnvVars: Record<string, string> = {}
+): Terminal {
   // Check if session already exists before spawning
   let existingSession = false;
   try {
@@ -27,12 +31,17 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
     console.log(`[Terminal] Session '${sessionName}' does not exist, will create`);
   }
 
+  if (Object.keys(customEnvVars).length > 0) {
+    console.log(`[Terminal] Custom env vars for injection: ${Object.keys(customEnvVars).join(', ')}`);
+  }
+
   // Use tmux for session persistence
   // For existing sessions: use attach-session (more reliable)
   // For new sessions: use new-session with -A flag
+  // Note: We DON'T use -e flags here because they pollute tmux's global environment
   const tmuxArgs = existingSession
     ? ['attach-session', '-t', sessionName]
-    : ['new-session', '-A', '-s', sessionName, '-c', cwd, '-e', `CLAUDE_TMUX_SESSION=${sessionName}`];
+    : ['new-session', '-A', '-s', sessionName, '-c', cwd];
 
   console.log(`[Terminal] Spawning: tmux ${tmuxArgs.join(' ')}`);
 
@@ -43,6 +52,8 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
     cwd,
     env: {
       ...process.env,
+      // Note: customEnvVars are NOT included here to avoid polluting the pty environment
+      // They will be injected per-session using tmux send-keys
       TERM: 'xterm-256color',
       CLAUDE_TMUX_SESSION: sessionName, // Always set for hook detection
       PATH: `/opt/homebrew/bin:${process.env.PATH}`,
@@ -59,6 +70,11 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
   };
   shell.onData(debugHandler);
 
+  // Remove debug handler after 2 seconds to prevent memory leak
+  setTimeout(() => {
+    (shell as any).removeListener('data', debugHandler);
+  }, 2000);
+
   // Debug: log when shell exits
   shell.onExit(({ exitCode, signal }) => {
     console.log(`[Terminal] Shell exited: code=${exitCode}, signal=${signal}, session='${sessionName}'`);
@@ -69,6 +85,16 @@ export function createTerminal(cwd: string, sessionName: string): Terminal {
     setTimeout(() => {
       exec(`tmux set-option -t "${sessionName}" history-limit 10000`);
       exec(`tmux set-option -t "${sessionName}" mouse on`);
+
+      // Inject custom environment variables directly into the shell
+      // This ensures vars are session-scoped and don't leak to other sessions
+      if (Object.keys(customEnvVars).length > 0) {
+        const exportCmds = Object.entries(customEnvVars)
+          .map(([key, value]) => `export ${key}="${value.replace(/"/g, '\\"')}"`)
+          .join('; ');
+        console.log(`[Terminal] Injecting env vars into session '${sessionName}': ${Object.keys(customEnvVars).join(', ')}`);
+        exec(`tmux send-keys -t "${sessionName}" "${exportCmds}" C-m`);
+      }
     }, 100);
   } else {
     // Also enable mouse for existing sessions

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Monitor, Plus, ChevronDown, Sparkles, Loader2, GitBranch, FolderOpen, AlertCircle, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EnvironmentSelector } from './EnvironmentSelector';
+import { EnvironmentFormModal } from './EnvironmentFormModal';
 
 type TabType = 'select' | 'clone';
 
@@ -21,7 +23,7 @@ interface NewSessionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   machines: Machine[];
-  onStartSession: (machineId: string, project: string) => void;
+  onStartSession: (machineId: string, project: string, environmentId?: string) => void;
 }
 
 export function NewSessionModal({
@@ -47,6 +49,11 @@ export function NewSessionModal({
   const [cloneError, setCloneError] = useState<string | null>(null);
   const [cloneSuccess, setCloneSuccess] = useState<string | null>(null);
 
+  // Environment state
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string | null>(null);
+  const [envModalOpen, setEnvModalOpen] = useState(false);
+  const [envRefreshKey, setEnvRefreshKey] = useState(0);
+
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
@@ -60,6 +67,7 @@ export function NewSessionModal({
       setPreviewedName('');
       setCloneError(null);
       setCloneSuccess(null);
+      setSelectedEnvironment(null);
     }
   }, [open]);
 
@@ -200,7 +208,7 @@ export function NewSessionModal({
 
   const handleStartSession = () => {
     if (selectedMachine && selectedProject) {
-      onStartSession(selectedMachine.id, selectedProject);
+      onStartSession(selectedMachine.id, selectedProject, selectedEnvironment || undefined);
       onOpenChange(false);
     }
   };
@@ -369,80 +377,97 @@ export function NewSessionModal({
 
                   {/* Select Folder Tab */}
                   {activeTab === 'select' && (
-                    <>
-                      <label className="block text-sm font-medium text-white/60 mb-3">
-                        Select Project
-                      </label>
-                      <div className="relative">
-                        <button
-                          onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
-                          className={cn(
-                            'w-full px-4 py-3 rounded-xl text-left',
-                        'bg-white/5 border border-white/10',
-                        'hover:bg-white/10 hover:border-white/20',
-                        'flex items-center justify-between',
-                        'transition-all'
-                      )}
-                    >
-                      <span className={selectedProject ? 'text-white' : 'text-white/40'}>
-                        {selectedProject || 'Choose a project...'}
-                      </span>
-                      <ChevronDown className={cn(
-                        'w-4 h-4 text-white/40 transition-transform',
-                        projectDropdownOpen && 'rotate-180'
-                      )} />
-                    </button>
+                    <div className="space-y-5">
+                      {/* Project Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-3">
+                          Select Project
+                        </label>
+                        <div className="relative">
+                          <button
+                            onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
+                            className={cn(
+                              'w-full px-4 py-3 rounded-xl text-left',
+                              'bg-white/5 border border-white/10',
+                              'hover:bg-white/10 hover:border-white/20',
+                              'flex items-center justify-between',
+                              'transition-all'
+                            )}
+                          >
+                            <span className={selectedProject ? 'text-white' : 'text-white/40'}>
+                              {selectedProject || 'Choose a project...'}
+                            </span>
+                            <ChevronDown className={cn(
+                              'w-4 h-4 text-white/40 transition-transform',
+                              projectDropdownOpen && 'rotate-180'
+                            )} />
+                          </button>
 
-                    {/* Dropdown */}
-                    <AnimatePresence>
-                      {projectDropdownOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -5 }}
-                          transition={{ duration: 0.15 }}
-                          className={cn(
-                            'absolute top-full left-0 right-0 mt-2 z-10',
-                            'bg-[#12121a] border border-white/10 rounded-xl',
-                            'shadow-xl shadow-black/50',
-                            'max-h-64 overflow-y-auto'
-                          )}
-                        >
-                          {loadingFolders ? (
-                            <div className="px-4 py-3 text-white/30 text-sm flex items-center gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Loading folders...
-                            </div>
-                          ) : folders.length > 0 ? (
-                            folders.map((folder) => (
-                              <button
-                                key={folder}
-                                onClick={() => {
-                                  setSelectedProject(folder);
-                                  setProjectDropdownOpen(false);
-                                }}
+                          {/* Dropdown */}
+                          <AnimatePresence>
+                            {projectDropdownOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                transition={{ duration: 0.15 }}
                                 className={cn(
-                                  'w-full px-4 py-2.5 text-left',
-                                  'hover:bg-white/5 transition-colors',
-                                  'first:rounded-t-xl last:rounded-b-xl',
-                                  selectedProject === folder
-                                    ? 'text-orange-400 bg-orange-500/10'
-                                    : 'text-white/80'
+                                  'absolute top-full left-0 right-0 mt-2 z-10',
+                                  'bg-[#12121a] border border-white/10 rounded-xl',
+                                  'shadow-xl shadow-black/50',
+                                  'max-h-64 overflow-y-auto'
                                 )}
                               >
-                                {folder}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-4 py-3 text-white/30 text-sm">
-                              No folders found
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                    </>
+                                {loadingFolders ? (
+                                  <div className="px-4 py-3 text-white/30 text-sm flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Loading folders...
+                                  </div>
+                                ) : folders.length > 0 ? (
+                                  folders.map((folder) => (
+                                    <button
+                                      key={folder}
+                                      onClick={() => {
+                                        setSelectedProject(folder);
+                                        setProjectDropdownOpen(false);
+                                      }}
+                                      className={cn(
+                                        'w-full px-4 py-2.5 text-left',
+                                        'hover:bg-white/5 transition-colors',
+                                        'first:rounded-t-xl last:rounded-b-xl',
+                                        selectedProject === folder
+                                          ? 'text-orange-400 bg-orange-500/10'
+                                          : 'text-white/80'
+                                      )}
+                                    >
+                                      {folder}
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-4 py-3 text-white/30 text-sm">
+                                    No folders found
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+
+                      {/* Environment Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-white/60 mb-3">
+                          Environment
+                        </label>
+                        <EnvironmentSelector
+                          key={envRefreshKey}
+                          agentUrl={selectedMachine?.config?.agentUrl || 'localhost:4678'}
+                          selectedId={selectedEnvironment}
+                          onSelect={setSelectedEnvironment}
+                          onManageClick={() => setEnvModalOpen(true)}
+                        />
+                      </div>
+                    </div>
                   )}
 
                   {/* Clone Repo Tab */}
@@ -560,6 +585,14 @@ export function NewSessionModal({
               </div>
             )}
           </motion.div>
+
+          {/* Environment Form Modal */}
+          <EnvironmentFormModal
+            open={envModalOpen}
+            onOpenChange={setEnvModalOpen}
+            agentUrl={selectedMachine?.config?.agentUrl || 'localhost:4678'}
+            onSaved={() => setEnvRefreshKey((k) => k + 1)}
+          />
         </motion.div>
       )}
     </AnimatePresence>

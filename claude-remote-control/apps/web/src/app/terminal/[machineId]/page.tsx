@@ -54,6 +54,7 @@ export default function TerminalPage() {
 
   const urlProject = searchParams.get('project');
   const urlSession = searchParams.get('session');
+  const urlEnvironment = searchParams.get('environment');
 
   const [machine, setMachine] = useState<Machine | null>(null);
   const [projects, setProjects] = useState<string[]>([]);
@@ -398,6 +399,7 @@ export default function TerminalPage() {
                   agentUrl={agentUrl}
                   project={selectedProject}
                   sessionName={selectedSession || undefined}
+                  environmentId={currentSessionInfo?.environmentId || urlEnvironment || undefined}
                   onConnectionChange={setIsConnected}
                   onSessionCreated={handleSessionCreated}
                   claudeStatus={currentSessionInfo?.status}

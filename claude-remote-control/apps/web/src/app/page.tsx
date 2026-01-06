@@ -10,10 +10,14 @@ import {
   Zap,
   Activity,
   AlertCircle,
+  LayoutGrid,
+  List,
+  Settings,
 } from 'lucide-react';
 import { MachineCard } from '@/components/MachineCard';
 import { NewSessionModal } from '@/components/NewSessionModal';
-import { RecentActivityFeed } from '@/components/RecentActivityFeed';
+import { SessionListView } from '@/components/SessionListView';
+import { EnvironmentsList } from '@/components/EnvironmentsList';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
 import { cn } from '@/lib/utils';
 
@@ -30,28 +34,34 @@ interface Machine {
   createdAt: string;
 }
 
+type ViewTab = 'sessions' | 'machines' | 'environments';
+
 export default function Home() {
   const router = useRouter();
-  const { setMachines: setPollingMachines, sessionsByMachine } = useSessionPolling();
+  const { setMachines: setPollingMachines, sessionsByMachine, getAllSessions } = useSessionPolling();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<ViewTab>('sessions');
 
-  const fetchMachines = useCallback(async (showRefreshIndicator = false) => {
-    if (showRefreshIndicator) setIsRefreshing(true);
-    try {
-      const response = await fetch('/api/machines');
-      const data = await response.json();
-      setMachines(data);
-      setPollingMachines(data);
-    } catch (err) {
-      console.error('Failed to fetch machines:', err);
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [setPollingMachines]);
+  const fetchMachines = useCallback(
+    async (showRefreshIndicator = false) => {
+      if (showRefreshIndicator) setIsRefreshing(true);
+      try {
+        const response = await fetch('/api/machines');
+        const data = await response.json();
+        setMachines(data);
+        setPollingMachines(data);
+      } catch (err) {
+        console.error('Failed to fetch machines:', err);
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [setPollingMachines]
+  );
 
   useEffect(() => {
     fetchMachines();
@@ -72,33 +82,51 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleMachineClick = (machineId: string) => {
-    router.push(`/terminal/${machineId}`);
-  };
+  // Navigate to session (new URL format)
+  const handleSelectSession = useCallback(
+    (machineId: string, sessionName: string) => {
+      router.push(`/s/${machineId}/${encodeURIComponent(sessionName)}`);
+    },
+    [router]
+  );
 
-  const handleStartSession = (machineId: string, project: string) => {
-    router.push(`/terminal/${machineId}?project=${encodeURIComponent(project)}`);
-  };
+  // Start new session
+  const handleStartSession = useCallback(
+    (machineId: string, project: string, environmentId?: string) => {
+      // Navigate to new session URL pattern with optional environment
+      let url = `/s/${machineId}/${encodeURIComponent(`${project}--new`)}`;
+      if (environmentId) {
+        url += `?env=${encodeURIComponent(environmentId)}`;
+      }
+      router.push(url);
+    },
+    [router]
+  );
 
-  const handleSelectSession = (machineId: string, project: string, sessionName: string) => {
-    router.push(
-      `/terminal/${machineId}?project=${encodeURIComponent(project)}&session=${encodeURIComponent(sessionName)}`
-    );
-  };
+  // Machine click (go to machine's terminal page - for machines tab)
+  const handleMachineClick = useCallback(
+    (machineId: string) => {
+      // If machine has sessions, go to the first one
+      const machineSessions = sessionsByMachine.get(machineId)?.sessions || [];
+      if (machineSessions.length > 0) {
+        handleSelectSession(machineId, machineSessions[0].name);
+      } else {
+        // No sessions, open new session modal for this machine
+        setNewSessionOpen(true);
+      }
+    },
+    [sessionsByMachine, handleSelectSession]
+  );
 
   // Stats
   const onlineMachines = machines.filter((m) => m.status === 'online');
   const offlineMachines = machines.filter((m) => m.status !== 'online');
+  const allSessions = getAllSessions();
 
-  // Calculate total sessions across all machines
-  let totalSessions = 0;
-  let needsAttention = 0;
-  sessionsByMachine.forEach((data) => {
-    totalSessions += data.sessions.length;
-    needsAttention += data.sessions.filter(
-      (s) => s.status === 'waiting' || s.status === 'permission'
-    ).length;
-  });
+  // Calculate attention count
+  const needsAttention = allSessions.filter(
+    (s) => s.status === 'waiting' || s.status === 'permission'
+  ).length;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#0a0a10] via-[#0d0d14] to-[#0a0a10]">
@@ -127,7 +155,7 @@ export default function Home() {
               <div className="w-px h-4 bg-white/10" />
               <div className="flex items-center gap-2 text-sm">
                 <Activity className="w-4 h-4 text-white/40" />
-                <span className="text-white/70 font-medium">{totalSessions}</span>
+                <span className="text-white/70 font-medium">{allSessions.length}</span>
                 <span className="text-white/30">sessions</span>
               </div>
               {needsAttention > 0 && (
@@ -175,23 +203,80 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Tabs */}
+      <div className="border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('sessions')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px',
+                activeTab === 'sessions'
+                  ? 'text-orange-400 border-orange-400'
+                  : 'text-white/50 border-transparent hover:text-white/70'
+              )}
+            >
+              <List className="w-4 h-4" />
+              Sessions
+              <span
+                className={cn(
+                  'px-2 py-0.5 rounded-full text-xs',
+                  activeTab === 'sessions' ? 'bg-orange-500/20' : 'bg-white/10'
+                )}
+              >
+                {allSessions.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('machines')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px',
+                activeTab === 'machines'
+                  ? 'text-orange-400 border-orange-400'
+                  : 'text-white/50 border-transparent hover:text-white/70'
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Machines
+              <span
+                className={cn(
+                  'px-2 py-0.5 rounded-full text-xs',
+                  activeTab === 'machines' ? 'bg-orange-500/20' : 'bg-white/10'
+                )}
+              >
+                {machines.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('environments')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px',
+                activeTab === 'environments'
+                  ? 'text-orange-400 border-orange-400'
+                  : 'text-white/50 border-transparent hover:text-white/70'
+              )}
+            >
+              <Settings className="w-4 h-4" />
+              Environments
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
           // Loading State
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-32 rounded-2xl bg-white/5 border border-white/10 animate-pulse"
-                />
-              ))}
-            </div>
-            <div className="h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-24 rounded-2xl bg-white/5 border border-white/10 animate-pulse"
+              />
+            ))}
           </div>
         ) : machines.length === 0 ? (
-          // Empty State
+          // Empty State - No machines
           <div className="flex items-center justify-center min-h-[60vh]">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -203,7 +288,8 @@ export default function Home() {
               </div>
               <h2 className="text-2xl font-bold text-white mb-3">No machines registered</h2>
               <p className="text-white/40 mb-6">
-                Start a local agent to register your first machine and begin managing Claude Code sessions remotely.
+                Start a local agent to register your first machine and begin managing Claude Code
+                sessions remotely.
               </p>
               <code className="inline-block px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/60 font-mono">
                 pnpm dev:agent
@@ -211,63 +297,116 @@ export default function Home() {
             </motion.div>
           </div>
         ) : (
-          // Main Layout: Machines + Activity Feed
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Machines Grid */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Machines</h2>
-                <span className="text-sm text-white/30">
-                  {onlineMachines.length} online, {offlineMachines.length} offline
-                </span>
-              </div>
+          // Content based on active tab
+          <AnimatePresence mode="wait">
+            {activeTab === 'sessions' ? (
+              <motion.div
+                key="sessions"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+              >
+                {allSessions.length === 0 ? (
+                  // No sessions empty state
+                  <div className="flex items-center justify-center min-h-[40vh]">
+                    <div className="text-center max-w-md">
+                      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                        <Zap className="w-8 h-8 text-white/20" />
+                      </div>
+                      <h3 className="text-lg font-medium text-white/80 mb-2">No active sessions</h3>
+                      <p className="text-sm text-white/40 mb-6">
+                        Start a new session to begin working with Claude Code
+                      </p>
+                      <button
+                        onClick={() => setNewSessionOpen(true)}
+                        className={cn(
+                          'inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all',
+                          'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400',
+                          'text-white shadow-lg shadow-orange-500/20'
+                        )}
+                      >
+                        <Plus className="w-4 h-4" />
+                        New Session
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <SessionListView
+                    sessions={allSessions}
+                    onSelectSession={handleSelectSession}
+                  />
+                )}
+              </motion.div>
+            ) : activeTab === 'machines' ? (
+              <motion.div
+                key="machines"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">Machines</h2>
+                  <span className="text-sm text-white/30">
+                    {onlineMachines.length} online, {offlineMachines.length} offline
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <AnimatePresence mode="popLayout">
-                  {/* Online machines first */}
-                  {onlineMachines.map((machine, index) => (
-                    <motion.div
-                      key={machine.id}
-                      layout
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.2, delay: index * 0.05 }}
-                    >
-                      <MachineCard
-                        machine={machine}
-                        onClick={() => handleMachineClick(machine.id)}
-                      />
-                    </motion.div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {/* Online machines first */}
+                    {onlineMachines.map((machine, index) => (
+                      <motion.div
+                        key={machine.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                      >
+                        <MachineCard
+                          machine={machine}
+                          onClick={() => handleMachineClick(machine.id)}
+                        />
+                      </motion.div>
+                    ))}
 
-                  {/* Offline machines */}
-                  {offlineMachines.map((machine, index) => (
-                    <motion.div
-                      key={machine.id}
-                      layout
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.2, delay: (onlineMachines.length + index) * 0.05 }}
-                    >
-                      <MachineCard
-                        machine={machine}
-                        onClick={() => handleMachineClick(machine.id)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Recent Activity Feed */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-28 p-4 rounded-2xl bg-white/[0.02] border border-white/5 min-h-[500px]">
-                <RecentActivityFeed onSelectSession={handleSelectSession} />
-              </div>
-            </div>
-          </div>
+                    {/* Offline machines */}
+                    {offlineMachines.map((machine, index) => (
+                      <motion.div
+                        key={machine.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{
+                          duration: 0.2,
+                          delay: (onlineMachines.length + index) * 0.05,
+                        }}
+                      >
+                        <MachineCard
+                          machine={machine}
+                          onClick={() => handleMachineClick(machine.id)}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="environments"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <EnvironmentsList machines={machines} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
       </div>
 

@@ -15,6 +15,7 @@ interface TerminalProps {
   agentUrl: string;
   project: string;
   sessionName?: string;
+  environmentId?: string;
   onConnectionChange?: (connected: boolean) => void;
   onSessionCreated?: (sessionName: string) => void;
   claudeStatus?: 'running' | 'waiting' | 'permission' | 'stopped' | 'ended' | 'idle';
@@ -30,7 +31,7 @@ function generateSessionName(project: string): string {
   return `${project}--${adj}-${noun}-${num}`;
 }
 
-export function Terminal({ agentUrl, project, sessionName, onConnectionChange, onSessionCreated, claudeStatus }: TerminalProps) {
+export function Terminal({ agentUrl, project, sessionName, environmentId, onConnectionChange, onSessionCreated, claudeStatus }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [connected, setConnected] = useState(false);
@@ -238,7 +239,10 @@ export function Terminal({ agentUrl, project, sessionName, onConnectionChange, o
 
       // Connect WebSocket
       const wsProtocol = agentUrl.includes('localhost') ? 'ws' : 'wss';
-      const wsUrl = `${wsProtocol}://${agentUrl}/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(effectiveSessionName)}`;
+      let wsUrl = `${wsProtocol}://${agentUrl}/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(effectiveSessionName)}`;
+      if (environmentId) {
+        wsUrl += `&environment=${encodeURIComponent(environmentId)}`;
+      }
       ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -321,9 +325,20 @@ export function Terminal({ agentUrl, project, sessionName, onConnectionChange, o
       if (handleResize) {
         window.removeEventListener('resize', handleResize);
       }
+
+      // Close WebSocket properly
       if (ws) {
-        ws.close();
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+          ws.close(1000, 'Component unmounting');
+        }
       }
+
+      // Clear WebSocket ref
+      if (wsRef.current === ws) {
+        wsRef.current = null;
+      }
+
+      // Dispose addons first (before terminal)
       if (webglAddonRef.current) {
         try {
           webglAddonRef.current.dispose();
@@ -332,11 +347,28 @@ export function Terminal({ agentUrl, project, sessionName, onConnectionChange, o
         }
         webglAddonRef.current = null;
       }
+
+      // Dispose terminal
       if (term) {
-        term.dispose();
+        try {
+          term.dispose();
+        } catch {
+          // Ignore disposal errors during cleanup
+        }
+      }
+
+      // Clear terminal refs
+      if (xtermRef.current === term) {
+        xtermRef.current = null;
+      }
+      if (fitAddonRef.current) {
+        fitAddonRef.current = null;
+      }
+      if (searchAddonRef.current) {
+        searchAddonRef.current = null;
       }
     };
-  }, [agentUrl, project, effectiveSessionName]);
+  }, [agentUrl, project, effectiveSessionName, environmentId]);
 
   // Search effect
   useEffect(() => {

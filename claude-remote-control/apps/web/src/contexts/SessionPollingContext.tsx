@@ -36,9 +36,18 @@ interface MachineSessionData {
   wsConnected: boolean;
 }
 
+export interface SessionWithMachine extends SessionInfo {
+  machineId: string;
+  machineName: string;
+  agentUrl: string;
+}
+
 interface SessionPollingContextValue {
   sessionsByMachine: Map<string, MachineSessionData>;
+  machines: Machine[];
   getSessionsForMachine: (machineId: string) => SessionInfo[];
+  getAllSessions: () => SessionWithMachine[];
+  getSession: (machineId: string, sessionName: string) => SessionInfo | null;
   refreshMachine: (machineId: string) => Promise<void>;
   setMachines: (machines: Machine[]) => void;
   isLoading: (machineId: string) => boolean;
@@ -66,6 +75,17 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   const wsConnectedRef = useRef<Set<string>>(new Set()); // Track connected machines via ref for polling
   const wsReconnectDelaysRef = useRef<Map<string, number>>(new Map());
   const wsReconnectTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      // Clear any pending reconnect timeouts
+      for (const timeout of wsReconnectTimeoutsRef.current.values()) {
+        clearTimeout(timeout);
+      }
+      wsReconnectTimeoutsRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     requestNotificationPermission();
@@ -451,10 +471,44 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [pollAllMachines, machines.length]);
 
+  // Get all sessions across all machines, flattened with machine context
+  const getAllSessions = useCallback((): SessionWithMachine[] => {
+    const allSessions: SessionWithMachine[] = [];
+    for (const [, data] of sessionsByMachine) {
+      for (const session of data.sessions) {
+        allSessions.push({
+          ...session,
+          machineId: data.machineId,
+          machineName: data.machineName,
+          agentUrl: data.agentUrl,
+        });
+      }
+    }
+    // Sort by lastStatusChange (most recent first), then by createdAt
+    return allSessions.sort((a, b) => {
+      const aTime = a.lastStatusChange || a.createdAt || 0;
+      const bTime = b.lastStatusChange || b.createdAt || 0;
+      return bTime - aTime;
+    });
+  }, [sessionsByMachine]);
+
+  // Get a specific session by machine and name
+  const getSession = useCallback(
+    (machineId: string, sessionName: string): SessionInfo | null => {
+      const data = sessionsByMachine.get(machineId);
+      if (!data) return null;
+      return data.sessions.find((s) => s.name === sessionName) || null;
+    },
+    [sessionsByMachine]
+  );
+
   const value: SessionPollingContextValue = {
     sessionsByMachine,
+    machines,
     getSessionsForMachine: (machineId: string) =>
       sessionsByMachine.get(machineId)?.sessions || [],
+    getAllSessions,
+    getSession,
     refreshMachine,
     setMachines: setMachinesState,
     isLoading: (machineId: string) => loadingMachines.has(machineId),

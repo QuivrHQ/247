@@ -13,6 +13,19 @@ import {
   updateEditorActivity,
   shutdownAllEditors,
 } from './editor.js';
+import {
+  loadEnvironments,
+  getEnvironmentsMetadata,
+  getEnvironmentMetadata,
+  getEnvironment,
+  createEnvironment,
+  updateEnvironment,
+  deleteEnvironment,
+  getEnvironmentVariables,
+  setSessionEnvironment,
+  getSessionEnvironment,
+  clearSessionEnvironment,
+} from './environments.js';
 import { cloneRepo, extractProjectName } from './git.js';
 import config from '../config.json' with { type: 'json' };
 import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@claude-remote/shared';
@@ -82,6 +95,61 @@ function generateSessionName(project: string): string {
   return `${project}--${adj}-${noun}-${num}`;
 }
 
+// Clean up stale status entries (called periodically)
+function cleanupStatusMaps() {
+  const now = Date.now();
+  const STALE_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours
+
+  let cleanedTmux = 0;
+  let cleanedClaude = 0;
+  let cleanedPending = 0;
+
+  // Get active tmux sessions
+  const { execSync } = require('child_process');
+  let activeSessions = new Set<string>();
+  try {
+    const output = execSync('tmux list-sessions -F "#{session_name}" 2>/dev/null', { encoding: 'utf-8' });
+    activeSessions = new Set(output.trim().split('\n').filter(Boolean));
+  } catch {
+    // No tmux sessions exist
+  }
+
+  // Clean tmuxSessionStatus - remove if session doesn't exist OR is stale
+  for (const [sessionName, status] of tmuxSessionStatus) {
+    const sessionExists = activeSessions.has(sessionName);
+    const isStale = (now - status.lastActivity) > STALE_THRESHOLD;
+
+    if (!sessionExists || isStale) {
+      tmuxSessionStatus.delete(sessionName);
+      cleanedTmux++;
+    }
+  }
+
+  // Clean claudeSessionStatus - remove if stale
+  for (const [sessionId, status] of claudeSessionStatus) {
+    const isStale = (now - status.lastActivity) > STALE_THRESHOLD;
+    if (isStale) {
+      claudeSessionStatus.delete(sessionId);
+      cleanedClaude++;
+    }
+  }
+
+  // Clean pendingTools
+  for (const [key, { timestamp }] of pendingTools) {
+    if ((now - timestamp) > STALE_THRESHOLD) {
+      pendingTools.delete(key);
+      cleanedPending++;
+    }
+  }
+
+  if (cleanedTmux > 0 || cleanedClaude > 0 || cleanedPending > 0) {
+    console.log(`[Status Cleanup] Removed ${cleanedTmux} tmux entries, ${cleanedClaude} claude entries, ${cleanedPending} pending tools`);
+  }
+}
+
+// Run cleanup every hour
+setInterval(cleanupStatusMaps, 60 * 60 * 1000);
+
 export function createServer() {
   const app = express();
   app.use(cors());
@@ -93,6 +161,9 @@ export function createServer() {
   // Initialize editor manager
   const typedConfig = config as unknown as AgentConfig;
   initEditor(typedConfig.editor, config.projects.basePath);
+
+  // Initialize environments
+  loadEnvironments();
 
   // Create proxy for code-server
   const editorProxy = httpProxy.createProxyServer({
@@ -126,6 +197,7 @@ export function createServer() {
     const url = new URL(req.url!, `http://${req.headers.host}`);
     const project = url.searchParams.get('project');
     const urlSessionName = url.searchParams.get('session');
+    const environmentId = url.searchParams.get('environment'); // Environment to use
     const sessionName = urlSessionName || generateSessionName(project || 'unknown');
 
     // Validate project - if whitelist is empty, allow any project
@@ -144,6 +216,10 @@ export function createServer() {
 
     console.log(`New terminal connection for project: ${project}`);
     console.log(`Project path: ${projectPath}`);
+    if (environmentId) {
+      const env = getEnvironment(environmentId);
+      console.log(`Using environment: ${env?.name || environmentId}`);
+    }
 
     // Verify path exists
     const fs = await import('fs');
@@ -153,11 +229,20 @@ export function createServer() {
       return;
     }
 
+    // Get environment variables for this session
+    const envVars = getEnvironmentVariables(environmentId || undefined);
+
     let terminal;
     try {
-      terminal = createTerminal(projectPath, sessionName);
+      terminal = createTerminal(projectPath, sessionName, envVars);
+      // Track which environment this session uses
+      if (environmentId) {
+        setSessionEnvironment(sessionName, environmentId);
+      }
     } catch (err) {
       console.error('Failed to create terminal:', err);
+      // Clean up any partial state
+      clearSessionEnvironment(sessionName);
       ws.close(1011, 'Failed to create terminal');
       return;
     }
@@ -172,30 +257,36 @@ export function createServer() {
     // If reconnecting to an existing session, send the scrollback history
     if (terminal.isExistingSession()) {
       console.log(`Reconnecting to existing session '${sessionName}', sending history...`);
-      terminal.captureHistory(10000).then((history) => {
-        if (history && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'history',
-            data: history,
-            lines: history.split('\n').length
-          }));
-        }
-      });
+      terminal.captureHistory(10000)
+        .then((history) => {
+          if (history && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'history',
+              data: history,
+              lines: history.split('\n').length
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error(`[Terminal] Failed to capture initial history for '${sessionName}':`, err);
+        });
     }
 
-    // Forward terminal output to WebSocket
-    terminal.onData((data) => {
+    // Forward terminal output to WebSocket - store handler for cleanup
+    const dataHandler = (data: string) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(data);
       }
-    });
+    };
+    terminal.onData(dataHandler);
 
-    terminal.onExit(({ exitCode }) => {
+    const exitHandler = ({ exitCode }: { exitCode: number }) => {
       console.log(`Terminal exited with code ${exitCode}`);
       if (ws.readyState === WebSocket.OPEN) {
         ws.close(1000, 'Terminal closed');
       }
-    });
+    };
+    terminal.onExit(exitHandler);
 
     // Handle incoming messages
     ws.on('message', (data) => {
@@ -236,15 +327,19 @@ export function createServer() {
             ws.send(JSON.stringify({ type: 'pong' }));
             break;
           case 'request-history':
-            terminal.captureHistory(msg.lines || 10000).then((history) => {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                  type: 'history',
-                  data: history,
-                  lines: history.split('\n').length
-                }));
-              }
-            });
+            terminal.captureHistory(msg.lines || 10000)
+              .then((history) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({
+                    type: 'history',
+                    data: history,
+                    lines: history.split('\n').length
+                  }));
+                }
+              })
+              .catch((err) => {
+                console.error(`[Terminal] Failed to capture history for '${sessionName}':`, err);
+              });
             break;
         }
       } catch (err) {
@@ -254,6 +349,15 @@ export function createServer() {
 
     ws.on('close', () => {
       console.log(`Client disconnected, tmux session '${sessionName}' preserved`);
+
+      // Remove terminal event listeners to prevent memory leaks
+      try {
+        (terminal as any).removeAllListeners?.('data');
+        (terminal as any).removeAllListeners?.('exit');
+      } catch {
+        // Terminal may not support removeAllListeners, ignore
+      }
+
       // Detach from tmux instead of killing - session stays alive
       terminal.detach();
 
@@ -335,6 +439,87 @@ export function createServer() {
     }
     const projectName = extractProjectName(url);
     res.json({ projectName });
+  });
+
+  // ========== Environment API Endpoints ==========
+
+  // List all environments (metadata only - no secret values sent to dashboard)
+  app.get('/api/environments', (_req, res) => {
+    res.json(getEnvironmentsMetadata());
+  });
+
+  // Get single environment metadata
+  app.get('/api/environments/:id', (req, res) => {
+    const metadata = getEnvironmentMetadata(req.params.id);
+    if (!metadata) {
+      return res.status(404).json({ error: 'Environment not found' });
+    }
+    res.json(metadata);
+  });
+
+  // Get full environment data (including secret values) - for local editing only
+  app.get('/api/environments/:id/full', (req, res) => {
+    const env = getEnvironment(req.params.id);
+    if (!env) {
+      return res.status(404).json({ error: 'Environment not found' });
+    }
+    res.json(env);
+  });
+
+  // Create environment
+  app.post('/api/environments', (req, res) => {
+    const { name, provider, isDefault, variables } = req.body;
+
+    if (!name || !provider || !variables) {
+      return res.status(400).json({ error: 'Missing required fields: name, provider, variables' });
+    }
+
+    try {
+      const env = createEnvironment({ name, provider, isDefault, variables });
+      // Return metadata only (not the actual secrets)
+      res.status(201).json({
+        id: env.id,
+        name: env.name,
+        provider: env.provider,
+        isDefault: env.isDefault,
+        variableKeys: Object.keys(env.variables),
+        createdAt: env.createdAt,
+        updatedAt: env.updatedAt,
+      });
+    } catch (err) {
+      console.error('[Environments] Create error:', err);
+      res.status(500).json({ error: 'Failed to create environment' });
+    }
+  });
+
+  // Update environment
+  app.put('/api/environments/:id', (req, res) => {
+    const { name, provider, isDefault, variables } = req.body;
+
+    const updated = updateEnvironment(req.params.id, { name, provider, isDefault, variables });
+    if (!updated) {
+      return res.status(404).json({ error: 'Environment not found' });
+    }
+
+    // Return metadata only
+    res.json({
+      id: updated.id,
+      name: updated.name,
+      provider: updated.provider,
+      isDefault: updated.isDefault,
+      variableKeys: Object.keys(updated.variables),
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    });
+  });
+
+  // Delete environment
+  app.delete('/api/environments/:id', (req, res) => {
+    const deleted = deleteEnvironment(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Environment not found' });
+    }
+    res.json({ success: true });
   });
 
   // Receive status updates from Claude Code hooks
@@ -460,6 +645,7 @@ export function createServer() {
       lastActivity?: string;
       lastEvent?: string;
       lastStatusChange?: number;
+      environmentId?: string;
     }
 
     try {
@@ -469,8 +655,6 @@ export function createServer() {
       );
 
       const sessions: SessionInfo[] = [];
-      const now = Date.now();
-      const HOOK_TTL = 2 * 60 * 1000; // Hook data valid for 2 minutes
 
       for (const line of stdout.trim().split('\n').filter(Boolean)) {
         const [name, created] = line.split('|');
@@ -479,38 +663,19 @@ export function createServer() {
 
         let status: SessionInfo['status'] = 'idle';
         let statusSource: SessionInfo['statusSource'] = 'tmux';
-        let lastActivity = '';
         let lastEvent: string | undefined;
         let lastStatusChange: number | undefined;
 
-        // 1. First check hook status (per-session, most reliable)
-        // Only use tmuxSessionStatus - no project fallback to avoid status sharing
+        // Use hook status if available, otherwise idle
         const hookData = tmuxSessionStatus.get(name);
 
-        if (hookData && (now - hookData.lastStatusChange < HOOK_TTL)) {
-          // Hook data is fresh (based on when status last changed, not event time)
+        if (hookData) {
           status = hookData.status;
           statusSource = 'hook';
           lastEvent = hookData.lastEvent;
           lastStatusChange = hookData.lastStatusChange;
-        } else {
-          // 2. Fallback to tmux heuristics
-          try {
-            const { stdout: paneContent } = await execAsync(
-              `tmux capture-pane -t "${name}" -p -S -3 2>/dev/null`
-            );
-            lastActivity = paneContent.trim().split('\n').pop() || '';
-
-            // Heuristic: check for common prompts to determine status
-            if (lastActivity.match(/[$>%#]\s*$/) || lastActivity.includes('Claude >') || lastActivity.includes('? ')) {
-              status = 'waiting';
-            } else if (lastActivity.length > 0) {
-              status = 'running';
-            }
-          } catch {
-            // Session exists but pane capture failed
-          }
         }
+        // No fallback - if no hook data, status remains 'idle'
 
         sessions.push({
           name,
@@ -518,9 +683,10 @@ export function createServer() {
           createdAt: parseInt(created) * 1000,
           status,
           statusSource,
-          lastActivity: lastActivity.slice(-80),
+          lastActivity: '',
           lastEvent,
           lastStatusChange,
+          environmentId: getSessionEnvironment(name), // Track which environment this session uses
         });
       }
 
@@ -579,6 +745,7 @@ export function createServer() {
 
       // Clean up status tracking and broadcast removal
       tmuxSessionStatus.delete(sessionName);
+      clearSessionEnvironment(sessionName); // Clean up environment tracking
       broadcastSessionRemoved(sessionName);
 
       res.json({ success: true, message: `Session ${sessionName} killed` });
@@ -714,8 +881,6 @@ export function createServer() {
             );
 
             const sessions: WSSessionInfo[] = [];
-            const now = Date.now();
-            const HOOK_TTL = 2 * 60 * 1000;
 
             for (const line of stdout.trim().split('\n').filter(Boolean)) {
               const [name, created] = line.split('|');
@@ -725,30 +890,16 @@ export function createServer() {
               let statusSource: WSSessionInfo['statusSource'] = 'tmux';
               let lastEvent: string | undefined;
               let lastStatusChange: number | undefined;
-              let lastActivity = '';
 
+              // Use hook status if available, otherwise idle
               const hookData = tmuxSessionStatus.get(name);
-              if (hookData && (now - hookData.lastStatusChange < HOOK_TTL)) {
-                // Use hook status if status change is recent (not event time)
+              if (hookData) {
                 status = hookData.status;
                 statusSource = 'hook';
                 lastEvent = hookData.lastEvent;
                 lastStatusChange = hookData.lastStatusChange;
-              } else {
-                try {
-                  const { stdout: paneContent } = await execAsync(
-                    `tmux capture-pane -t "${name}" -p -S -3 2>/dev/null`
-                  );
-                  lastActivity = paneContent.trim().split('\n').pop() || '';
-                  if (lastActivity.match(/[$>%#]\s*$/) || lastActivity.includes('Claude >')) {
-                    status = 'waiting';
-                  } else if (lastActivity.length > 0) {
-                    status = 'running';
-                  }
-                } catch {
-                  // Session exists but pane capture failed
-                }
               }
+              // No fallback - if no hook data, status remains 'idle'
 
               sessions.push({
                 name,
@@ -756,19 +907,29 @@ export function createServer() {
                 createdAt: parseInt(created) * 1000,
                 status,
                 statusSource,
-                lastActivity: lastActivity.slice(-80),
+                lastActivity: '',
                 lastEvent,
                 lastStatusChange,
+                environmentId: getSessionEnvironment(name),
               });
             }
 
             const message: WSStatusMessageFromAgent = { type: 'sessions-list', sessions };
-            ws.send(JSON.stringify(message));
-            console.log(`[Status WS] Sent initial sessions list: ${sessions.length} sessions`);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(message));
+              console.log(`[Status WS] Sent initial sessions list: ${sessions.length} sessions`);
+            }
           } catch (err) {
             console.error('[Status WS] Failed to get initial sessions:', err);
-            const message: WSStatusMessageFromAgent = { type: 'sessions-list', sessions: [] };
-            ws.send(JSON.stringify(message));
+            // Only send error response if connection is still open
+            if (ws.readyState === WebSocket.OPEN) {
+              try {
+                const message: WSStatusMessageFromAgent = { type: 'sessions-list', sessions: [] };
+                ws.send(JSON.stringify(message));
+              } catch (sendErr) {
+                console.error('[Status WS] Failed to send error response:', sendErr);
+              }
+            }
           }
         })();
 

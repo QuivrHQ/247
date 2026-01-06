@@ -487,8 +487,8 @@ export function createServer() {
         // Only use tmuxSessionStatus - no project fallback to avoid status sharing
         const hookData = tmuxSessionStatus.get(name);
 
-        if (hookData && (now - hookData.lastActivity < HOOK_TTL)) {
-          // Hook data is fresh, use it
+        if (hookData && (now - hookData.lastStatusChange < HOOK_TTL)) {
+          // Hook data is fresh (based on when status last changed, not event time)
           status = hookData.status;
           statusSource = 'hook';
           lastEvent = hookData.lastEvent;
@@ -728,7 +728,8 @@ export function createServer() {
               let lastActivity = '';
 
               const hookData = tmuxSessionStatus.get(name);
-              if (hookData && (now - hookData.lastActivity < HOOK_TTL)) {
+              if (hookData && (now - hookData.lastStatusChange < HOOK_TTL)) {
+                // Use hook status if status change is recent (not event time)
                 status = hookData.status;
                 statusSource = 'hook';
                 lastEvent = hookData.lastEvent;

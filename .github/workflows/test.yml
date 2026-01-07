@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./claude-remote-control
 
     steps:
       - name: Checkout code
@@ -24,6 +27,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
+          cache-dependency-path: ./claude-remote-control/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install
@@ -38,5 +42,5 @@ jobs:
         uses: codecov/codecov-action@v4
         if: always()
         with:
-          files: ./apps/agent/coverage/lcov.info,./apps/web/coverage/lcov.info,./packages/shared/coverage/lcov.info
+          files: ./claude-remote-control/apps/agent/coverage/lcov.info,./claude-remote-control/apps/web/coverage/lcov.info,./claude-remote-control/packages/shared/coverage/lcov.info
           fail_ci_if_error: false

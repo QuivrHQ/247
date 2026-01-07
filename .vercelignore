@@ -1,0 +1,25 @@
+# Ignore node_modules everywhere
+**/node_modules
+
+# Ignore build outputs
+**/dist
+**/.next
+**/.turbo
+
+# Ignore test files
+**/tests
+**/*.test.ts
+**/*.test.tsx
+
+# Ignore IDE and OS files
+.idea
+.vscode
+.DS_Store
+
+# Ignore git
+.git
+
+# Ignore other non-essential files
+*.log
+*.md
+!README.md

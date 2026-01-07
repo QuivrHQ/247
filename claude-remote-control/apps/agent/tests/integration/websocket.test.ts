@@ -357,7 +357,7 @@ describe('WebSocket Terminal', () => {
       ws.close();
     });
 
-    it('ignores duplicate start-claude-ralph messages for same session', async () => {
+    it('ignores duplicate start-claude-ralph messages within debounce window', async () => {
       const ws = await connectWS('allowed-project');
 
       // Wait for terminal to be created

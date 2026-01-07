@@ -49,6 +49,10 @@ jobs:
         working-directory: claude-remote-control
         run: pnpm --filter @vibecompany/247-cli build
 
+      - name: Bundle CLI (copy hooks and agent)
+        working-directory: claude-remote-control/packages/cli
+        run: pnpm bundle
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -68,15 +72,27 @@ jobs:
           git push origin main
           git push origin v${{ env.NEW_VERSION }}
 
-      # For tag push: extract version from tag
+      # For tag push: extract version from tag and update package.json
       - name: Get version from tag
         if: github.event_name == 'push'
         run: |
           echo "NEW_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
+      - name: Update package.json version
+        if: github.event_name == 'push'
+        working-directory: claude-remote-control/packages/cli
+        run: |
+          npm version ${{ env.NEW_VERSION }} --no-git-tag-version --allow-same-version
+
+      - name: Verify version before publish
+        working-directory: claude-remote-control/packages/cli
+        run: |
+          echo "Package version: $(node -p "require('./package.json').version")"
+          echo "Expected version: ${{ env.NEW_VERSION }}"
+
       - name: Publish to npm
         working-directory: claude-remote-control/packages/cli
-        run: npm publish --access public --provenance
+        run: npm publish --access public --provenance --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

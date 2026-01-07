@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { existsSync, mkdirSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { CREATE_TABLES_SQL, SCHEMA_VERSION, RETENTION_CONFIG } from './schema.js';
 import type { DbSchemaVersion } from './schema.js';
@@ -8,8 +8,8 @@ import type { DbSchemaVersion } from './schema.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Database file location: apps/agent/data/agent.db
-const DATA_DIR = join(__dirname, '..', '..', 'data');
+// Database file location: ~/.247/data/agent.db
+const DATA_DIR = resolve(process.env.HOME || '~', '.247', 'data');
 const DB_PATH = join(DATA_DIR, 'agent.db');
 
 // Singleton database instance

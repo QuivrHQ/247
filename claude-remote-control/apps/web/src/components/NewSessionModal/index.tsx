@@ -213,16 +213,29 @@ export function NewSessionModal({
                       selectedProject={selectedProject}
                       onSelectProject={setSelectedProject}
                       loadingFolders={loadingFolders}
-                      ralphPrompt={ralph.ralphPrompt}
-                      onRalphPromptChange={ralph.setRalphPrompt}
-                      ralphMaxIterations={ralph.ralphMaxIterations}
-                      onRalphMaxIterationsChange={ralph.setRalphMaxIterations}
+                      // Prompt Builder props
+                      taskDescription={ralph.taskDescription}
+                      onTaskDescriptionChange={ralph.setTaskDescription}
+                      successCriteria={ralph.successCriteria}
+                      onSuccessCriteriaChange={ralph.setSuccessCriteria}
+                      deliverables={ralph.deliverables}
+                      onDeliverablesChange={ralph.setDeliverables}
+                      customDeliverable={ralph.customDeliverable}
+                      onCustomDeliverableChange={ralph.setCustomDeliverable}
                       ralphCompletionPromise={ralph.ralphCompletionPromise}
                       onRalphCompletionPromiseChange={ralph.setRalphCompletionPromise}
+                      completionInstruction={ralph.completionInstruction}
+                      fullPrompt={ralph.fullPrompt}
+                      isPreviewExpanded={ralph.isPreviewExpanded}
+                      onPreviewExpandedChange={ralph.setPreviewExpanded}
+                      // Other settings
+                      ralphMaxIterations={ralph.ralphMaxIterations}
+                      onRalphMaxIterationsChange={ralph.setRalphMaxIterations}
                       ralphUseWorktree={ralph.ralphUseWorktree}
                       onRalphUseWorktreeChange={ralph.setRalphUseWorktree}
                       ralphTrustMode={ralph.ralphTrustMode}
                       onRalphTrustModeChange={ralph.setRalphTrustMode}
+                      // Environment & actions
                       agentUrl={agentUrl}
                       selectedEnvironment={selectedEnvironment}
                       onSelectEnvironment={setSelectedEnvironment}

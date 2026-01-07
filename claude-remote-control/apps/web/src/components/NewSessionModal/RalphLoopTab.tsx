@@ -1,26 +1,44 @@
 'use client';
 
-import { Play, Shield, GitBranch, AlertTriangle, Sparkles, Hash, Check } from 'lucide-react';
+import { Play, Shield, GitBranch, AlertTriangle, Sparkles, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EnvironmentSelector } from '../EnvironmentSelector';
 import { ProjectDropdown } from './ProjectDropdown';
 import { ToggleSwitch } from '../ui/toggle-switch';
+import { PromptBuilder } from './PromptBuilder';
+import type { RalphDeliverable } from '@vibecompany/247-shared';
 
 interface RalphLoopTabProps {
   folders: string[];
   selectedProject: string;
   onSelectProject: (project: string) => void;
   loadingFolders: boolean;
-  ralphPrompt: string;
-  onRalphPromptChange: (prompt: string) => void;
-  ralphMaxIterations: number;
-  onRalphMaxIterationsChange: (iterations: number) => void;
+
+  // Prompt Builder props
+  taskDescription: string;
+  onTaskDescriptionChange: (desc: string) => void;
+  successCriteria: string[];
+  onSuccessCriteriaChange: (criteria: string[]) => void;
+  deliverables: RalphDeliverable[];
+  onDeliverablesChange: (deliverables: RalphDeliverable[]) => void;
+  customDeliverable: string;
+  onCustomDeliverableChange: (value: string) => void;
   ralphCompletionPromise: string;
   onRalphCompletionPromiseChange: (promise: string) => void;
+  completionInstruction: string;
+  fullPrompt: string;
+  isPreviewExpanded: boolean;
+  onPreviewExpandedChange: (expanded: boolean) => void;
+
+  // Other settings
+  ralphMaxIterations: number;
+  onRalphMaxIterationsChange: (iterations: number) => void;
   ralphUseWorktree: boolean;
   onRalphUseWorktreeChange: (use: boolean) => void;
   ralphTrustMode: boolean;
   onRalphTrustModeChange: (trust: boolean) => void;
+
+  // Environment & actions
   agentUrl: string;
   selectedEnvironment: string | null;
   onSelectEnvironment: (id: string | null) => void;
@@ -35,12 +53,22 @@ export function RalphLoopTab({
   selectedProject,
   onSelectProject,
   loadingFolders,
-  ralphPrompt,
-  onRalphPromptChange,
-  ralphMaxIterations,
-  onRalphMaxIterationsChange,
+  taskDescription,
+  onTaskDescriptionChange,
+  successCriteria,
+  onSuccessCriteriaChange,
+  deliverables,
+  onDeliverablesChange,
+  customDeliverable,
+  onCustomDeliverableChange,
   ralphCompletionPromise,
   onRalphCompletionPromiseChange,
+  completionInstruction,
+  fullPrompt,
+  isPreviewExpanded,
+  onPreviewExpandedChange,
+  ralphMaxIterations,
+  onRalphMaxIterationsChange,
   ralphUseWorktree,
   onRalphUseWorktreeChange,
   ralphTrustMode,
@@ -83,40 +111,28 @@ export function RalphLoopTab({
         />
       </div>
 
-      {/* Prompt Input */}
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-white/40">
-          Task Prompt
-          <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">
-            Required
-          </span>
-        </label>
-        <div className="group relative">
-          <textarea
-            value={ralphPrompt}
-            onChange={(e) => onRalphPromptChange(e.target.value)}
-            placeholder="Implement feature X with tests. Output <promise>COMPLETE</promise> when done."
-            rows={4}
-            className={cn(
-              'w-full rounded-xl px-4 py-3',
-              'border border-white/10 bg-white/5',
-              'text-white placeholder:text-white/25',
-              'focus:border-purple-500/50 focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-purple-500/20',
-              'resize-none transition-all duration-200'
-            )}
-          />
-          {ralphPrompt.length > 0 && (
-            <div className="absolute bottom-3 right-3 text-xs text-white/30">
-              {ralphPrompt.length} chars
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Prompt Builder */}
+      <PromptBuilder
+        taskDescription={taskDescription}
+        onTaskDescriptionChange={onTaskDescriptionChange}
+        successCriteria={successCriteria}
+        onSuccessCriteriaChange={onSuccessCriteriaChange}
+        deliverables={deliverables}
+        onDeliverablesChange={onDeliverablesChange}
+        customDeliverable={customDeliverable}
+        onCustomDeliverableChange={onCustomDeliverableChange}
+        completionSignal={ralphCompletionPromise}
+        onCompletionSignalChange={onRalphCompletionPromiseChange}
+        completionInstruction={completionInstruction}
+        fullPrompt={fullPrompt}
+        isPreviewExpanded={isPreviewExpanded}
+        onPreviewExpandedChange={onPreviewExpandedChange}
+      />
 
-      {/* Options Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Options Row */}
+      <div className="flex items-start gap-4">
         {/* Max Iterations */}
-        <div className="space-y-2">
+        <div className="flex-shrink-0 space-y-2">
           <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-white/40">
             <Hash className="h-3 w-3" />
             Max Iterations
@@ -129,7 +145,7 @@ export function RalphLoopTab({
               min={1}
               max={100}
               className={cn(
-                'w-full rounded-xl px-4 py-3',
+                'w-24 rounded-xl px-4 py-3',
                 'border border-white/10 bg-white/5',
                 'text-white placeholder:text-white/30',
                 'focus:border-purple-500/50 focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-purple-500/20',
@@ -138,55 +154,30 @@ export function RalphLoopTab({
               )}
             />
           </div>
-          <p className="text-[10px] text-white/30">Safety limit for iterations</p>
         </div>
 
-        {/* Completion Promise */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-white/40">
-            <Check className="h-3 w-3" />
-            Completion Signal
-          </label>
-          <input
-            type="text"
-            value={ralphCompletionPromise}
-            onChange={(e) => onRalphCompletionPromiseChange(e.target.value)}
-            placeholder="COMPLETE"
-            className={cn(
-              'w-full rounded-xl px-4 py-3',
-              'border border-white/10 bg-white/5',
-              'text-white placeholder:text-white/30',
-              'focus:border-purple-500/50 focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-purple-500/20',
-              'transition-all duration-200'
-            )}
+        {/* Toggle Options - inline */}
+        <div className="flex-1 space-y-2">
+          <ToggleSwitch
+            checked={ralphTrustMode}
+            onCheckedChange={onRalphTrustModeChange}
+            label="Trust Mode"
+            description="Auto-accept all tool permissions"
+            icon={<Shield className="h-4 w-4" />}
+            accentColor="amber"
+            warningIcon={<AlertTriangle className="h-3 w-3" />}
+            warningText="Full autonomy"
           />
-          <p className="text-[10px] text-white/30">Text that signals task completion</p>
+
+          <ToggleSwitch
+            checked={ralphUseWorktree}
+            onCheckedChange={onRalphUseWorktreeChange}
+            label="Git Worktree"
+            description="Isolated branch for this loop"
+            icon={<GitBranch className="h-4 w-4" />}
+            accentColor="purple"
+          />
         </div>
-      </div>
-
-      {/* Toggle Options */}
-      <div className="space-y-3">
-        {/* Trust Mode Toggle */}
-        <ToggleSwitch
-          checked={ralphTrustMode}
-          onCheckedChange={onRalphTrustModeChange}
-          label="Trust Mode"
-          description="Auto-accept all Claude tool permissions"
-          icon={<Shield className="h-4 w-4" />}
-          accentColor="amber"
-          warningIcon={<AlertTriangle className="h-3 w-3" />}
-          warningText="Full autonomy - Claude will execute all actions without confirmation"
-        />
-
-        {/* Git Worktree Toggle */}
-        <ToggleSwitch
-          checked={ralphUseWorktree}
-          onCheckedChange={onRalphUseWorktreeChange}
-          label="Use Git Worktree"
-          description="Create an isolated branch for parallel loops"
-          icon={<GitBranch className="h-4 w-4" />}
-          accentColor="purple"
-        />
       </div>
 
       {/* Environment Selection */}

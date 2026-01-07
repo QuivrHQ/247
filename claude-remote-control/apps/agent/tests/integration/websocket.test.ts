@@ -417,7 +417,7 @@ describe('WebSocket Terminal', () => {
       );
       expect(ralphCommand).toBeDefined();
       expect(ralphCommand![0]).toContain('--max-iterations 5');
-      expect(ralphCommand![0]).toContain('--completion-promise "DONE"');
+      expect(ralphCommand![0]).toContain('--completion-promise DONE');
       ws.close();
     });
 
@@ -431,7 +431,7 @@ describe('WebSocket Terminal', () => {
         JSON.stringify({
           type: 'start-claude-ralph',
           config: {
-            prompt: 'Build "feature" with\nnewlines',
+            prompt: "Build 'feature' with\nnewlines",
           },
         })
       );
@@ -445,10 +445,10 @@ describe('WebSocket Terminal', () => {
       );
       expect(commandCalls.length).toBeGreaterThan(0);
 
-      // Double quotes should be escaped, newlines replaced with spaces
+      // Single quotes should be escaped with '\'', newlines replaced with spaces
       const cmd = commandCalls[0]![0];
-      expect(cmd).toContain('\\"feature\\"');
-      expect(cmd).not.toContain('\n');
+      expect(cmd).toContain("'\\''feature'\\''"); // Single quotes escaped
+      expect(cmd).not.toContain('\n'); // Newlines converted to spaces
       ws.close();
     });
 

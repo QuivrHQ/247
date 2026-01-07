@@ -162,4 +162,57 @@ Terminal communication via `ws://agent:4678/terminal?project=X&session=Y`:
 - `{ type: 'input', data: string }` - keyboard input
 - `{ type: 'resize', cols, rows }` - terminal resize
 - `{ type: 'start-claude' }` - launch Claude Code
+- `{ type: 'start-claude-ralph', config: RalphLoopConfig }` - launch Ralph Loop
 - Binary data for terminal output
+
+## Ralph Loop Implementation
+
+Ralph Loop is an iterative AI development loop that runs Claude Code with a specific prompt until completion.
+
+### Shell Command Escaping (IMPORTANT)
+
+When injecting commands into the terminal for Ralph Loop, **always use single quotes** for the outer command to avoid shell escaping issues with nested quotes:
+
+```typescript
+// ✅ CORRECT: Use single quotes for outer command
+const promptEscaped = prompt.replace(/\n/g, ' ').replace(/'/g, "'\\''");
+const command = `claude '/ralph-loop:ralph-loop ${promptEscaped} --max-iterations 10'`;
+
+// ❌ WRONG: Double quotes cause issues with nested quotes
+const command = `claude "/ralph-loop:ralph-loop \"${prompt}\" --args"`;
+```
+
+**Why single quotes?**
+- Inside single quotes, the shell does not interpret any special characters except `'` itself
+- Only single quotes need escaping: `'` becomes `'\''` (end quote, escaped quote, start quote)
+- Double quotes require escaping of `"`, `$`, `` ` ``, `\`, and `!` which is error-prone
+
+### Terminal Ready State
+
+The agent's terminal has an `onReady` callback mechanism for new sessions:
+- **New sessions**: `isReady = false`, callbacks are queued and fired after tmux initialization (100ms delay)
+- **Existing sessions**: `isReady = true`, callbacks fire immediately
+
+Always use `terminal.onReady()` when injecting commands that depend on the shell being ready:
+
+```typescript
+terminal.onReady(() => {
+  terminal.write('command\r');
+});
+```
+
+### Ralph Loop Config Validation
+
+Always validate config values before building commands:
+
+```typescript
+// Check for valid number
+if (typeof config.maxIterations === 'number' && config.maxIterations > 0) {
+  args.push(`--max-iterations ${config.maxIterations}`);
+}
+
+// Check for non-empty string
+if (config.completionPromise && config.completionPromise.trim()) {
+  args.push(`--completion-promise ${config.completionPromise.trim()}`);
+}
+```

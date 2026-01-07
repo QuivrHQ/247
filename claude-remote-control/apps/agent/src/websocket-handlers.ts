@@ -311,24 +311,25 @@ ${ralphConfig.prompt}
 
       // Build ralph-loop command arguments
       const ralphArgs: string[] = [];
-      if (ralphConfig.maxIterations)
+      if (typeof ralphConfig.maxIterations === 'number' && ralphConfig.maxIterations > 0) {
         ralphArgs.push(`--max-iterations ${ralphConfig.maxIterations}`);
-      if (ralphConfig.completionPromise)
-        ralphArgs.push(`--completion-promise "${ralphConfig.completionPromise}"`);
+      }
+      if (ralphConfig.completionPromise && ralphConfig.completionPromise.trim()) {
+        ralphArgs.push(`--completion-promise ${ralphConfig.completionPromise.trim()}`);
+      }
 
-      // Escape the prompt for shell: escape backslashes first, then double quotes
-      const ralphPromptEscaped = ralphConfig.prompt
-        .replace(/\\/g, '\\\\')
-        .replace(/"/g, '\\"')
-        .replace(/\n/g, ' ');
+      // Escape the prompt for shell using single quotes (safest method)
+      // Inside single quotes, only single quotes need escaping: ' becomes '\''
+      const promptEscapedForSingleQuotes = ralphConfig.prompt
+        .replace(/\n/g, ' ') // Convert newlines to spaces
+        .replace(/'/g, "'\\''"); // Escape single quotes
 
-      // Build the full /ralph-loop:ralph-loop command (plugin:command syntax)
-      const ralphLoopCmd =
-        `/ralph-loop:ralph-loop "${ralphPromptEscaped}" ${ralphArgs.join(' ')}`.trim();
-
-      // Launch Claude with the ralph-loop command as initial prompt
+      // Build the full command with single-quoted prompt
+      // Format: claude [flags] '/ralph-loop:ralph-loop PROMPT [--args]'
+      const argsStr = ralphArgs.length > 0 ? ` ${ralphArgs.join(' ')}` : '';
       const claudeFlagsStr = claudeFlags.length > 0 ? `${claudeFlags.join(' ')} ` : '';
-      terminal.write(`claude ${claudeFlagsStr}"${ralphLoopCmd}"\r`);
+      const fullCommand = `claude ${claudeFlagsStr}'/ralph-loop:ralph-loop ${promptEscapedForSingleQuotes}${argsStr}'`;
+      terminal.write(`${fullCommand}\r`);
     })();
   });
 }

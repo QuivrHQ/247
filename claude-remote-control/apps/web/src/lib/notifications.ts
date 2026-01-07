@@ -1,4 +1,4 @@
-import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
 
 export interface SessionInfo {
   name: string;

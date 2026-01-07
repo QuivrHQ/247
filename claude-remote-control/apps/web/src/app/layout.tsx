@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Claude Remote Control',
-  description: 'Web terminal access to Claude Code from anywhere',
+  title: '247',
+  description: '247 - Web terminal access to Claude Code from anywhere',
 };
 
 export default function RootLayout({

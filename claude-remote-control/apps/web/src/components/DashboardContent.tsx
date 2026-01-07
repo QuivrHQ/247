@@ -96,7 +96,7 @@ export function DashboardContent({
                   <Zap className="w-10 h-10 text-orange-500" />
                 </div>
 
-                <h2 className="text-3xl font-bold text-white mb-3">Welcome to Claude Remote</h2>
+                <h2 className="text-3xl font-bold text-white mb-3">Welcome to 247</h2>
                 <p className="text-white/40 text-lg mb-10 max-w-md">
                   Select a session from the sidebar to continue working, or start a new task below.
                 </p>

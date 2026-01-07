@@ -1,6 +1,6 @@
 import { spawn, ChildProcess, execSync } from 'child_process';
 import { createConnection } from 'net';
-import type { EditorConfig, EditorStatus } from '@claude-remote/shared';
+import type { EditorConfig, EditorStatus } from '@vibecompany/247-shared';
 
 interface EditorInstance {
   project: string;

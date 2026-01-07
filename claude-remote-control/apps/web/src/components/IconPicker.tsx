@@ -31,7 +31,7 @@ import {
   DEFAULT_PROVIDER_ICONS,
   type EnvironmentIcon,
   type EnvironmentProvider,
-} from '@claude-remote/shared';
+} from '@vibecompany/247-shared';
 
 // Map icon names to Lucide components
 const iconMap: Record<EnvironmentIcon, LucideIcon> = {

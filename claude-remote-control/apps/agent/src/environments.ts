@@ -8,8 +8,8 @@ import type {
   EnvironmentProvider,
   CreateEnvironmentRequest,
   UpdateEnvironmentRequest,
-} from '@claude-remote/shared';
-import { ENVIRONMENT_PRESETS } from '@claude-remote/shared';
+} from '@vibecompany/247-shared';
+import { ENVIRONMENT_PRESETS } from '@vibecompany/247-shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

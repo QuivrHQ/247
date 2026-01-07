@@ -1,8 +1,8 @@
 {
-  "name": "claude-remote-control",
+  "name": "247",
   "version": "0.1.0",
   "private": true,
-  "description": "Web terminal access to Claude Code from anywhere",
+  "description": "247 - Web terminal access to Claude Code from anywhere",
   "author": "Stan",
   "license": "MIT",
   "packageManager": "pnpm@9.15.1",
@@ -19,8 +19,8 @@
     "test:unit": "turbo test:unit",
     "test:integration": "turbo test:integration",
     "test:coverage": "turbo test -- --coverage",
-    "dev:web": "pnpm --filter @claude-remote/web dev",
-    "dev:agent": "pnpm --filter @claude-remote/agent dev"
+    "dev:web": "pnpm --filter @vibecompany/247-web dev",
+    "dev:agent": "pnpm --filter @vibecompany/247-agent dev"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.16",

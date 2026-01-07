@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, Zap, Globe, Eye, EyeOff, AlertCircle, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EnvironmentProvider, Environment, EnvironmentMetadata, EnvironmentIcon } from '@claude-remote/shared';
-import { ENVIRONMENT_PRESETS, DEFAULT_PROVIDER_ICONS } from '@claude-remote/shared';
+import type { EnvironmentProvider, Environment, EnvironmentMetadata, EnvironmentIcon } from '@vibecompany/247-shared';
+import { ENVIRONMENT_PRESETS, DEFAULT_PROVIDER_ICONS } from '@vibecompany/247-shared';
 import { IconPicker } from './IconPicker';
 
 interface EnvVariable {

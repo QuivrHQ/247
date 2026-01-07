@@ -1,4 +1,4 @@
-import type { SessionStatus, AttentionReason, EnvironmentProvider } from '@claude-remote/shared';
+import type { SessionStatus, AttentionReason, EnvironmentProvider } from '@vibecompany/247-shared';
 
 // ============================================================================
 // Database Row Types

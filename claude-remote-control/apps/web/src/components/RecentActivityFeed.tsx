@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus, type AttentionReason } from '@claude-remote/shared';
+import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 

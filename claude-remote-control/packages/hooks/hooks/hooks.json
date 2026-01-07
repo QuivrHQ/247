@@ -1,5 +1,5 @@
 {
-  "description": "Simplified status tracking hooks for Claude Remote Control",
+  "description": "Simplified status tracking hooks for 247",
   "hooks": {
     "SessionStart": [
       {

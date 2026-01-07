@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { EnvironmentCard, AddEnvironmentCard } from './EnvironmentCard';
 import { EnvironmentFormModal } from './EnvironmentFormModal';
 import { DeleteEnvironmentDialog } from './DeleteEnvironmentDialog';
-import type { EnvironmentMetadata } from '@claude-remote/shared';
+import type { EnvironmentMetadata } from '@vibecompany/247-shared';
 
 interface Machine {
   id: string;

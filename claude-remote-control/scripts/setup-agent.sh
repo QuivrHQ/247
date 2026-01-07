@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Setting up Claude Remote Agent..."
+echo "Setting up 247 Agent..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -15,7 +15,7 @@ cd "$PROJECT_ROOT/apps/agent"
 pnpm build
 
 # Create launchd plist for auto-start
-PLIST_PATH="$HOME/Library/LaunchAgents/com.claude-remote.agent.plist"
+PLIST_PATH="$HOME/Library/LaunchAgents/com.vibecompany.247.plist"
 
 cat > "$PLIST_PATH" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -23,7 +23,7 @@ cat > "$PLIST_PATH" << EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.claude-remote.agent</string>
+    <string>com.vibecompany.247</string>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
@@ -36,9 +36,9 @@ cat > "$PLIST_PATH" << EOF
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/claude-remote-agent.log</string>
+    <string>/tmp/247-agent.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/claude-remote-agent.error.log</string>
+    <string>/tmp/247-agent.error.log</string>
 </dict>
 </plist>
 EOF
@@ -52,5 +52,5 @@ echo "To stop the agent service:"
 echo "  launchctl unload $PLIST_PATH"
 echo ""
 echo "Logs are at:"
-echo "  /tmp/claude-remote-agent.log"
-echo "  /tmp/claude-remote-agent.error.log"
+echo "  /tmp/247-agent.log"
+echo "  /tmp/247-agent.error.log"

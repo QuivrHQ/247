@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SessionInfo } from '@/lib/notifications';
-import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
 
 // Simplified sorting logic - just createdAt (newest first)
 const sortSessions = (sessions: SessionInfo[]): SessionInfo[] => {

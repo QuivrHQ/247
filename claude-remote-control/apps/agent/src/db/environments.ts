@@ -8,8 +8,8 @@ import type {
   EnvironmentIcon,
   CreateEnvironmentRequest,
   UpdateEnvironmentRequest,
-} from '@claude-remote/shared';
-import { ENVIRONMENT_PRESETS } from '@claude-remote/shared';
+} from '@vibecompany/247-shared';
+import { ENVIRONMENT_PRESETS } from '@vibecompany/247-shared';
 
 // ============================================================================
 // Conversion Functions

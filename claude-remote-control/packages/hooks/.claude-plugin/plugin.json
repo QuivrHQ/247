@@ -1,5 +1,5 @@
 {
-  "name": "claude-remote-status",
+  "name": "247-status",
   "version": "1.0.0",
-  "description": "Status tracking for Claude Remote Control dashboard"
+  "description": "Status tracking for 247 dashboard"
 }

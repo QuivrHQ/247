@@ -4,7 +4,7 @@ import { forwardRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Clock, MessageSquare, Shield, Circle, Loader2, X, Activity, FileText, CheckCircle, Archive } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus, type AttentionReason } from '@claude-remote/shared';
+import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import { EnvironmentBadge } from './EnvironmentBadge';
 import { cn } from '@/lib/utils';

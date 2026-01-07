@@ -15,7 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
-import { type SessionStatus, type AttentionReason } from '@claude-remote/shared';
+import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 

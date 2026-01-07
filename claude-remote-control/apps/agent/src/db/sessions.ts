@@ -1,7 +1,7 @@
 import { getDatabase } from './index.js';
 import { recordStatusChange } from './history.js';
 import type { DbSession, UpsertSessionInput } from './schema.js';
-import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
 
 /**
  * Get a session by name

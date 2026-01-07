@@ -45,9 +45,9 @@ import {
   getChangesSummary,
 } from './git.js';
 import config from '../config.json' with { type: 'json' };
-import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@claude-remote/shared';
+import type { WSMessageToAgent, AgentConfig, WSSessionInfo, WSStatusMessageFromAgent } from '@vibecompany/247-shared';
 
-import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
 
 // Store session status from Claude Code hooks
 // Simplified to 3 states: working (active), needs_attention (user intervention needed), idle (no activity)

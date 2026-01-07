@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EnvironmentMetadata } from '@claude-remote/shared';
+import type { EnvironmentMetadata } from '@vibecompany/247-shared';
 
 interface DeleteEnvironmentDialogProps {
   environment: EnvironmentMetadata | null;

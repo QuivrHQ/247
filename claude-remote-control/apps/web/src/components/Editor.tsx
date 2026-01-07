@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EditorStatus } from '@claude-remote/shared';
+import type { EditorStatus } from '@vibecompany/247-shared';
 
 interface EditorProps {
   agentUrl: string;

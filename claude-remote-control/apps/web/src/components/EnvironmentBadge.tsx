@@ -1,8 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { EnvironmentProvider, EnvironmentIcon } from '@claude-remote/shared';
-import { DEFAULT_PROVIDER_ICONS } from '@claude-remote/shared';
+import type { EnvironmentProvider, EnvironmentIcon } from '@vibecompany/247-shared';
+import { DEFAULT_PROVIDER_ICONS } from '@vibecompany/247-shared';
 import { getIconComponent } from './IconPicker';
 
 const providerColors: Record<EnvironmentProvider, { color: string; bg: string }> = {

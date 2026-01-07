@@ -14,7 +14,7 @@ import {
   requestNotificationPermission,
   showSessionNotification,
 } from '@/lib/notifications';
-import type { WSStatusMessageFromAgent } from '@claude-remote/shared';
+import type { WSStatusMessageFromAgent } from '@vibecompany/247-shared';
 
 export interface Machine {
   id: string;

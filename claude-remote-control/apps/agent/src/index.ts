@@ -4,7 +4,7 @@ import config from '../config.json' with { type: 'json' };
 const PORT = config.agent?.port || 4678;
 
 async function main() {
-  console.log(`Starting Claude Remote Agent for ${config.machine.name}...`);
+  console.log(`Starting 247 Agent for ${config.machine.name}...`);
 
   const server = await createServer();
 

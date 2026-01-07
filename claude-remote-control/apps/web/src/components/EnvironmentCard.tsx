@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Globe, Star, Pencil, Trash2, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EnvironmentMetadata, EnvironmentProvider } from '@claude-remote/shared';
+import type { EnvironmentMetadata, EnvironmentProvider } from '@vibecompany/247-shared';
 
 const providerConfig: Record<
   EnvironmentProvider,

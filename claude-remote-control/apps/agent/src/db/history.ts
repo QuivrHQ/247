@@ -1,6 +1,6 @@
 import { getDatabase } from './index.js';
 import type { DbStatusHistory } from './schema.js';
-import type { SessionStatus, AttentionReason } from '@claude-remote/shared';
+import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
 
 /**
  * Record a status change in history

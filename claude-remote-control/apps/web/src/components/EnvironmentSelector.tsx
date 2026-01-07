@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Zap, Globe, Check, Star, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EnvironmentMetadata, EnvironmentProvider } from '@claude-remote/shared';
+import type { EnvironmentMetadata, EnvironmentProvider } from '@vibecompany/247-shared';
 
 const providerConfig: Record<EnvironmentProvider, { icon: typeof Zap; label: string; color: string }> = {
   anthropic: { icon: Zap, label: 'Anthropic', color: 'text-orange-400' },

@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { SessionCard } from './SessionCard';
 import { SessionPreviewPopover } from './SessionPreviewPopover';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus } from '@claude-remote/shared';
+import { type SessionStatus } from '@vibecompany/247-shared';
 import { cn } from '@/lib/utils';
 
 interface SessionSidebarProps {

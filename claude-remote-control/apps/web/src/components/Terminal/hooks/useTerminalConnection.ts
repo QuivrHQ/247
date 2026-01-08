@@ -7,7 +7,14 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { CanvasAddon } from '@xterm/addon-canvas';
 import type { RalphLoopConfig } from '@vibecompany/247-shared';
-import { TERMINAL_THEME, WS_RECONNECT_BASE_DELAY, WS_RECONNECT_MAX_DELAY } from '../constants';
+import {
+  TERMINAL_THEME,
+  WS_RECONNECT_BASE_DELAY,
+  WS_RECONNECT_MAX_DELAY,
+  WS_PING_INTERVAL,
+  WS_PONG_TIMEOUT,
+  WS_ACTIVITY_PAUSE,
+} from '../constants';
 import { buildWebSocketUrl } from '@/lib/utils';
 
 interface UseTerminalConnectionProps {
@@ -52,6 +59,12 @@ export function useTerminalConnection({
   const reconnectDelayRef = useRef<number>(WS_RECONNECT_BASE_DELAY);
   const intentionalCloseRef = useRef<boolean>(false);
   const isReconnectRef = useRef<boolean>(false);
+
+  // Adaptive heartbeat tracking
+  const lastActivityRef = useRef<number>(Date.now());
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const awaitingPongRef = useRef<boolean>(false);
 
   const scrollToBottom = useCallback(() => {
     xtermRef.current?.scrollToBottom();
@@ -166,10 +179,13 @@ export function useTerminalConnection({
         if (hasImage) return;
 
         const text = clipboardData.getData('text');
-        if (text && ws && ws.readyState === WebSocket.OPEN) {
+        // Use wsRef.current to get the active WebSocket (may have been reconnected)
+        const activeWs = wsRef.current;
+        if (text && activeWs?.readyState === WebSocket.OPEN) {
           e.preventDefault();
           isPastingRef.current = true;
-          ws.send(JSON.stringify({ type: 'input', data: text }));
+          lastActivityRef.current = Date.now(); // Track activity for adaptive heartbeat
+          activeWs.send(JSON.stringify({ type: 'input', data: text }));
           setTimeout(() => {
             isPastingRef.current = false;
           }, 50);
@@ -196,6 +212,54 @@ export function useTerminalConnection({
       wsRef.current = ws;
       const currentTerm = term;
       const currentWs = ws;
+
+      // Adaptive heartbeat - sends pings only when inactive
+      const startHeartbeat = () => {
+        // Clear any existing interval
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+        }
+        // Reset state
+        awaitingPongRef.current = false;
+        lastActivityRef.current = Date.now();
+
+        pingIntervalRef.current = setInterval(() => {
+          const timeSinceActivity = Date.now() - lastActivityRef.current;
+
+          // Don't ping if there was recent activity (we'll detect disconnect on next send)
+          if (timeSinceActivity < WS_ACTIVITY_PAUSE) return;
+
+          // Don't ping if already waiting for a pong
+          if (awaitingPongRef.current) return;
+
+          const activeWs = wsRef.current;
+          if (activeWs?.readyState === WebSocket.OPEN) {
+            activeWs.send(JSON.stringify({ type: 'ping' }));
+            awaitingPongRef.current = true;
+
+            // Set timeout for pong response
+            pongTimeoutRef.current = setTimeout(() => {
+              if (awaitingPongRef.current && !intentionalCloseRef.current) {
+                console.warn('Pong timeout - forcing reconnection');
+                activeWs.close(4000, 'Pong timeout');
+              }
+            }, WS_PONG_TIMEOUT);
+          }
+        }, WS_PING_INTERVAL);
+      };
+
+      // Stop heartbeat and clear all related timeouts
+      const stopHeartbeat = () => {
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
+        }
+        awaitingPongRef.current = false;
+      };
 
       currentWs.onopen = () => {
         if (cancelled) return;
@@ -239,13 +303,24 @@ export function useTerminalConnection({
           currentTerm.write('\r\n');
           currentWs.send(JSON.stringify({ type: 'start-claude-ralph', config: ralphConfig }));
         }
+
+        // Start adaptive heartbeat to detect silent disconnections
+        startHeartbeat();
       };
 
       currentWs.onmessage = (event) => {
         if (cancelled) return;
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'pong') return;
+          if (msg.type === 'pong') {
+            // Reset heartbeat state on pong received
+            awaitingPongRef.current = false;
+            if (pongTimeoutRef.current) {
+              clearTimeout(pongTimeoutRef.current);
+              pongTimeoutRef.current = null;
+            }
+            return;
+          }
           if (msg.type === 'history') {
             currentTerm.clear();
             currentTerm.write(msg.data);
@@ -260,6 +335,9 @@ export function useTerminalConnection({
       currentWs.onclose = () => {
         if (cancelled) return;
         setConnected(false);
+
+        // Stop heartbeat on disconnect
+        stopHeartbeat();
 
         if (intentionalCloseRef.current) {
           setConnectionState('disconnected');
@@ -302,8 +380,11 @@ export function useTerminalConnection({
 
       currentTerm.onData((data) => {
         if (isPastingRef.current) return;
-        if (currentWs.readyState === WebSocket.OPEN) {
-          currentWs.send(JSON.stringify({ type: 'input', data }));
+        // Use wsRef.current to get the active WebSocket (may have been reconnected)
+        const activeWs = wsRef.current;
+        if (activeWs?.readyState === WebSocket.OPEN) {
+          lastActivityRef.current = Date.now(); // Track activity for adaptive heartbeat
+          activeWs.send(JSON.stringify({ type: 'input', data }));
         }
       });
 
@@ -319,8 +400,10 @@ export function useTerminalConnection({
             // but doesn't trigger standard resize events
             requestAnimationFrame(() => {
               fitAddon.fit();
-              if (currentWs.readyState === WebSocket.OPEN) {
-                currentWs.send(
+              // Use wsRef.current to get the active WebSocket (may have been reconnected)
+              const activeWs = wsRef.current;
+              if (activeWs?.readyState === WebSocket.OPEN) {
+                activeWs.send(
                   JSON.stringify({ type: 'resize', cols: currentTerm.cols, rows: currentTerm.rows })
                 );
               }
@@ -328,8 +411,9 @@ export function useTerminalConnection({
               // Sometimes getComputedStyle returns stale values on first frame
               setTimeout(() => {
                 fitAddon.fit();
-                if (currentWs.readyState === WebSocket.OPEN) {
-                  currentWs.send(
+                const activeWsFallback = wsRef.current;
+                if (activeWsFallback?.readyState === WebSocket.OPEN) {
+                  activeWsFallback.send(
                     JSON.stringify({
                       type: 'resize',
                       cols: currentTerm.cols,
@@ -394,6 +478,17 @@ export function useTerminalConnection({
 
       reconnectDelayRef.current = WS_RECONNECT_BASE_DELAY;
       isReconnectRef.current = false;
+
+      // Clean up heartbeat
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      if (pongTimeoutRef.current) {
+        clearTimeout(pongTimeoutRef.current);
+        pongTimeoutRef.current = null;
+      }
+      awaitingPongRef.current = false;
 
       if (handleResize) {
         window.removeEventListener('resize', handleResize);

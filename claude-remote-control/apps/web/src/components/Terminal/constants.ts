@@ -6,6 +6,11 @@
 export const WS_RECONNECT_BASE_DELAY = 1000; // 1 second
 export const WS_RECONNECT_MAX_DELAY = 30000; // 30 seconds
 
+// Heartbeat constants (adaptive ping)
+export const WS_PING_INTERVAL = 10000; // 10 seconds between pings
+export const WS_PONG_TIMEOUT = 5000; // 5 seconds to receive pong
+export const WS_ACTIVITY_PAUSE = 3000; // 3 seconds after activity before resuming pings
+
 // xterm.js theme
 export const TERMINAL_THEME = {
   background: '#0a0a10',

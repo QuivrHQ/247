@@ -58,8 +58,8 @@ export function EnvironmentCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        'relative rounded-xl overflow-hidden',
-        'bg-white/[0.02] border border-white/10',
+        'relative overflow-hidden rounded-xl',
+        'border border-white/10 bg-white/[0.02]',
         'border-l-4',
         config.borderColor,
         config.bgHover,
@@ -69,20 +69,20 @@ export function EnvironmentCard({
       {/* Main Content */}
       <div className="p-4">
         {/* Header: Icon + Default Badge */}
-        <div className="flex items-start justify-between mb-3">
+        <div className="mb-3 flex items-start justify-between">
           <div
             className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center',
-              'bg-white/5 border border-white/10'
+              'flex h-10 w-10 items-center justify-center rounded-lg',
+              'border border-white/10 bg-white/5'
             )}
           >
-            <Icon className={cn('w-5 h-5', config.color)} />
+            <Icon className={cn('h-5 w-5', config.color)} />
           </div>
 
           {environment.isDefault && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-500/10 border border-orange-500/20">
-              <Star className="w-3 h-3 text-orange-400 fill-orange-400" />
-              <span className="text-[10px] font-medium text-orange-400 uppercase tracking-wide">
+            <div className="flex items-center gap-1 rounded-md border border-orange-500/20 bg-orange-500/10 px-2 py-1">
+              <Star className="h-3 w-3 fill-orange-400 text-orange-400" />
+              <span className="text-[10px] font-medium uppercase tracking-wide text-orange-400">
                 Default
               </span>
             </div>
@@ -90,12 +90,12 @@ export function EnvironmentCard({
         </div>
 
         {/* Name & Provider */}
-        <h3 className="text-base font-medium text-white mb-1">{environment.name}</h3>
-        <p className="text-sm text-white/40 mb-3">{config.label}</p>
+        <h3 className="mb-1 text-base font-medium text-white">{environment.name}</h3>
+        <p className="mb-3 text-sm text-white/40">{config.label}</p>
 
         {/* Variable Count */}
         <div className="flex items-center gap-1.5 text-xs text-white/30">
-          <Key className="w-3.5 h-3.5" />
+          <Key className="h-3.5 w-3.5" />
           <span>
             {variableCount} variable{variableCount !== 1 ? 's' : ''}
           </span>
@@ -112,7 +112,7 @@ export function EnvironmentCard({
         transition={{ duration: 0.15 }}
         className="overflow-hidden border-t border-white/5"
       >
-        <div className="flex items-center gap-2 p-3 bg-white/[0.02]">
+        <div className="flex items-center gap-2 bg-white/[0.02] p-3">
           {/* Set Default Button */}
           {!environment.isDefault && (
             <button
@@ -121,13 +121,13 @@ export function EnvironmentCard({
                 onSetDefault();
               }}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
-                'bg-white/5 hover:bg-orange-500/20 text-white/60 hover:text-orange-400',
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium',
+                'bg-white/5 text-white/60 hover:bg-orange-500/20 hover:text-orange-400',
                 'border border-white/10 hover:border-orange-500/30',
                 'transition-all'
               )}
             >
-              <Star className="w-3.5 h-3.5" />
+              <Star className="h-3.5 w-3.5" />
               Set Default
             </button>
           )}
@@ -141,13 +141,13 @@ export function EnvironmentCard({
               onEdit();
             }}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
-              'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white',
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium',
+              'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white',
               'border border-white/10 hover:border-white/20',
               'transition-all'
             )}
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil className="h-3.5 w-3.5" />
             Edit
           </button>
 
@@ -158,13 +158,13 @@ export function EnvironmentCard({
               onDelete();
             }}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
-              'bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400',
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium',
+              'bg-white/5 text-white/60 hover:bg-red-500/20 hover:text-red-400',
               'border border-white/10 hover:border-red-500/30',
               'transition-all'
             )}
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="h-3.5 w-3.5" />
             Delete
           </button>
         </div>
@@ -181,9 +181,9 @@ export function AddEnvironmentCard({ onClick }: { onClick: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
       className={cn(
-        'w-full h-full min-h-[180px] rounded-xl',
-        'bg-white/[0.02] border-2 border-dashed border-white/10',
-        'hover:bg-white/5 hover:border-white/20',
+        'h-full min-h-[120px] w-full rounded-xl',
+        'border-2 border-dashed border-white/10 bg-white/[0.02]',
+        'hover:border-white/20 hover:bg-white/5',
         'flex flex-col items-center justify-center gap-3',
         'text-white/40 hover:text-white/60',
         'transition-all duration-200',
@@ -192,13 +192,13 @@ export function AddEnvironmentCard({ onClick }: { onClick: () => void }) {
     >
       <div
         className={cn(
-          'w-12 h-12 rounded-xl flex items-center justify-center',
-          'bg-white/5 border border-white/10',
-          'group-hover:bg-orange-500/10 group-hover:border-orange-500/20',
+          'flex h-12 w-12 items-center justify-center rounded-xl',
+          'border border-white/10 bg-white/5',
+          'group-hover:border-orange-500/20 group-hover:bg-orange-500/10',
           'transition-all'
         )}
       >
-        <Zap className="w-6 h-6 group-hover:text-orange-400 transition-colors" />
+        <Zap className="h-6 w-6 transition-colors group-hover:text-orange-400" />
       </div>
       <span className="text-sm font-medium">Add Environment</span>
     </motion.button>

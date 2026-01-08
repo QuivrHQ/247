@@ -27,9 +27,7 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
   const onlineMachines = machines.filter((m) => m.status === 'online');
 
   // Selected machine state
-  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(
-    onlineMachines[0] || null
-  );
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(onlineMachines[0] || null);
   const [machineDropdownOpen, setMachineDropdownOpen] = useState(false);
 
   // Environments data
@@ -165,12 +163,12 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
   // No online machines
   if (onlineMachines.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <Monitor className="w-8 h-8 text-white/20" />
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+            <Monitor className="h-8 w-8 text-white/20" />
           </div>
-          <h3 className="text-lg font-medium text-white/80 mb-2">No machines online</h3>
+          <h3 className="mb-2 text-lg font-medium text-white/80">No machines online</h3>
           <p className="text-sm text-white/40">
             Start an agent on your machine to manage environments
           </p>
@@ -182,23 +180,25 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
   return (
     <div className="space-y-6">
       {/* Header: Machine Selector + Add Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Machine Selector */}
         <div className="relative">
           <button
             onClick={() => setMachineDropdownOpen(!machineDropdownOpen)}
             className={cn(
-              'flex items-center gap-3 px-4 py-2.5 rounded-xl',
-              'bg-white/5 border border-white/10',
-              'hover:bg-white/10 hover:border-white/20',
+              'flex items-center gap-3 rounded-xl px-4 py-2.5',
+              'border border-white/10 bg-white/5',
+              'hover:border-white/20 hover:bg-white/10',
               'transition-all'
             )}
           >
-            <Monitor className="w-4 h-4 text-white/50" />
-            <span className="text-white font-medium">{selectedMachine?.name || 'Select machine'}</span>
+            <Monitor className="h-4 w-4 text-white/50" />
+            <span className="font-medium text-white">
+              {selectedMachine?.name || 'Select machine'}
+            </span>
             <ChevronDown
               className={cn(
-                'w-4 h-4 text-white/40 transition-transform',
+                'h-4 w-4 text-white/40 transition-transform',
                 machineDropdownOpen && 'rotate-180'
               )}
             />
@@ -213,9 +213,9 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
                 exit={{ opacity: 0, y: -5 }}
                 transition={{ duration: 0.15 }}
                 className={cn(
-                  'absolute top-full left-0 mt-2 z-20',
+                  'absolute left-0 top-full z-20 mt-2',
                   'min-w-[200px]',
-                  'bg-[#12121a] border border-white/10 rounded-xl',
+                  'rounded-xl border border-white/10 bg-[#12121a]',
                   'shadow-xl shadow-black/50',
                   'overflow-hidden'
                 )}
@@ -228,14 +228,14 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
                       setMachineDropdownOpen(false);
                     }}
                     className={cn(
-                      'w-full px-4 py-2.5 text-left flex items-center gap-2',
-                      'hover:bg-white/5 transition-colors',
+                      'flex w-full items-center gap-2 px-4 py-2.5 text-left',
+                      'transition-colors hover:bg-white/5',
                       selectedMachine?.id === machine.id
-                        ? 'text-orange-400 bg-orange-500/10'
+                        ? 'bg-orange-500/10 text-orange-400'
                         : 'text-white/80'
                     )}
                   >
-                    <Monitor className="w-4 h-4" />
+                    <Monitor className="h-4 w-4" />
                     {machine.name}
                   </button>
                 ))}
@@ -251,12 +251,12 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
             setFormModalOpen(true);
           }}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
+            'flex items-center gap-2 rounded-xl px-4 py-2.5 font-medium transition-all',
             'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400',
             'text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30'
           )}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           New Environment
         </button>
       </div>
@@ -264,45 +264,45 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
       {/* Content */}
       {loading ? (
         // Loading State
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[180px] rounded-xl bg-white/5 border border-white/10 animate-pulse"
+              className="h-[140px] animate-pulse rounded-xl border border-white/10 bg-white/5"
             />
           ))}
         </div>
       ) : error ? (
         // Error State
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-8 h-8 text-red-400" />
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div className="max-w-md text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
+              <Zap className="h-8 w-8 text-red-400" />
             </div>
-            <h3 className="text-lg font-medium text-white/80 mb-2">Connection Error</h3>
-            <p className="text-sm text-white/40 mb-4">{error}</p>
+            <h3 className="mb-2 text-lg font-medium text-white/80">Connection Error</h3>
+            <p className="mb-4 text-sm text-white/40">{error}</p>
             <button
               onClick={fetchEnvironments}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium',
-                'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white',
+                'inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium',
+                'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white',
                 'border border-white/10 transition-all'
               )}
             >
-              <Loader2 className="w-4 h-4" />
+              <Loader2 className="h-4 w-4" />
               Retry
             </button>
           </div>
         </div>
       ) : environments.length === 0 ? (
         // Empty State
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-8 h-8 text-white/20" />
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div className="max-w-md text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+              <Zap className="h-8 w-8 text-white/20" />
             </div>
-            <h3 className="text-lg font-medium text-white/80 mb-2">No environments configured</h3>
-            <p className="text-sm text-white/40 mb-6">
+            <h3 className="mb-2 text-lg font-medium text-white/80">No environments configured</h3>
+            <p className="mb-6 text-sm text-white/40">
               Create your first environment to manage API keys for Claude Code
             </p>
             <button
@@ -311,19 +311,19 @@ export function EnvironmentsList({ machines }: EnvironmentsListProps) {
                 setFormModalOpen(true);
               }}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all',
+                'inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition-all',
                 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400',
                 'text-white shadow-lg shadow-orange-500/20'
               )}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Create Environment
             </button>
           </div>
         </div>
       ) : (
         // Environments Grid
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <AnimatePresence mode="popLayout">
             {environments.map((env, index) => (
               <motion.div

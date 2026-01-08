@@ -17,7 +17,7 @@ import {
   ArrowLeft,
   Sparkles,
 } from 'lucide-react';
-import { cn, buildWebSocketUrl } from '@/lib/utils';
+import { cn, buildWebSocketUrl, stripProtocol } from '@/lib/utils';
 
 const STORAGE_KEY = 'agentConnection';
 
@@ -364,8 +364,11 @@ export function AgentConnectionSettings({
 
   // Save connection
   const handleSave = () => {
-    const url = getCurrentUrl();
+    let url = getCurrentUrl();
     if (!url) return;
+
+    // Strip protocol prefix if user entered one (https://, wss://, etc.)
+    url = stripProtocol(url);
 
     const method = connectionType === 'local' ? 'localhost' : remoteMethod;
 

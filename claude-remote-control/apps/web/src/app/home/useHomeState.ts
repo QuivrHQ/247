@@ -138,6 +138,7 @@ export function useHomeState() {
       const params = new URLSearchParams(searchParams.toString());
       params.set('session', newSessionName);
       params.set('machine', machineId);
+      params.set('create', 'true');
       router.replace(`?${params.toString()}`, { scroll: false });
     },
     [searchParams, router]
@@ -149,6 +150,7 @@ export function useHomeState() {
         setSelectedSession((prev) => (prev ? { ...prev, sessionName: actualSessionName } : null));
         const params = new URLSearchParams(searchParams.toString());
         params.set('session', actualSessionName);
+        params.delete('create');
         router.replace(`?${params.toString()}`, { scroll: false });
       }
     },

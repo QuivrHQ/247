@@ -313,7 +313,9 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   const connectWebSocket = useCallback(
     (machine: Machine) => {
       const agentUrl = machine.config?.agentUrl || 'localhost:4678';
-      const wsUrl = buildWebSocketUrl(agentUrl, '/status');
+      // Include app version in WebSocket URL for auto-update detection
+      const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0';
+      const wsUrl = buildWebSocketUrl(agentUrl, `/status?v=${encodeURIComponent(appVersion)}`);
 
       // Close existing connection if any
       const existingWs = wsConnectionsRef.current.get(machine.id);
@@ -390,6 +392,15 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
               case 'session-archived':
                 console.log(`[WS] Session archived: ${msg.sessionName}`);
                 archiveSession(machine.id, machine.name, agentUrl, msg.session);
+                break;
+
+              case 'version-info':
+                console.log(`[WS] Agent version: ${msg.agentVersion}`);
+                break;
+
+              case 'update-pending':
+                console.log(`[WS] Agent updating to ${msg.targetVersion}: ${msg.message}`);
+                // Agent will restart, WebSocket will reconnect automatically
                 break;
             }
           } catch (err) {

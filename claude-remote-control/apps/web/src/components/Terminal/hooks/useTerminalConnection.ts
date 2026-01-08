@@ -346,11 +346,16 @@ export function useTerminalConnection({
       }
 
       // WebSocket connection
+      // Read create flag from browser URL to determine if this is a new session creation
+      const urlParams = new URLSearchParams(window.location.search);
+      const isNewSession = urlParams.get('create') === 'true';
+
       let wsUrl = buildWebSocketUrl(
         agentUrl,
         `/terminal?project=${encodeURIComponent(project)}&session=${encodeURIComponent(sessionName)}`
       );
       if (environmentId) wsUrl += `&environment=${encodeURIComponent(environmentId)}`;
+      if (isNewSession) wsUrl += '&create=true';
 
       ws = new WebSocket(wsUrl);
       wsRef.current = ws;

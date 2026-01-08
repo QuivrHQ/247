@@ -3,9 +3,22 @@
  */
 
 import { WebSocket } from 'ws';
+import { execSync } from 'child_process';
 import { createTerminal } from './terminal.js';
 import { config } from './config.js';
 import * as sessionsDb from './db/sessions.js';
+
+/**
+ * Check if a tmux session exists
+ */
+function tmuxSessionExists(sessionName: string): boolean {
+  try {
+    execSync(`tmux has-session -t "${sessionName}" 2>/dev/null`);
+    return true;
+  } catch {
+    return false;
+  }
+}
 import {
   getEnvironmentVariables,
   getEnvironmentMetadata,
@@ -27,6 +40,8 @@ import type {
   WSSessionInfo,
   WSStatusMessageFromAgent,
 } from '247-shared';
+import { getAgentVersion, needsUpdate } from './version.js';
+import { triggerUpdate, isUpdateInProgress } from './updater.js';
 
 /**
  * Handle terminal WebSocket connections
@@ -35,6 +50,7 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
   const project = url.searchParams.get('project');
   const urlSessionName = url.searchParams.get('session');
   const environmentId = url.searchParams.get('environment');
+  const createFlag = url.searchParams.get('create') === 'true';
   const sessionName = urlSessionName || generateSessionName(project || 'unknown');
 
   // Validate project
@@ -61,6 +77,18 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
     }
 
     const envVars = getEnvironmentVariables(environmentId || undefined);
+
+    // Check if session exists before attempting to create/connect
+    const sessionExists = tmuxSessionExists(sessionName);
+
+    // If session doesn't exist and no create flag, reject the connection
+    if (!sessionExists && !createFlag) {
+      console.log(
+        `[Terminal] Session '${sessionName}' not found and create flag not set, rejecting connection`
+      );
+      ws.close(4001, 'Session not found');
+      return;
+    }
 
     let terminal;
     try {
@@ -243,9 +271,32 @@ function handleTerminalMessage(
 /**
  * Handle status WebSocket connections (real-time session updates)
  */
-export function handleStatusConnection(ws: WebSocket): void {
+export function handleStatusConnection(ws: WebSocket, url?: URL): void {
   console.log('[Status WS] New subscriber connected');
   statusSubscribers.add(ws);
+
+  // Extract web version from query params and check for updates
+  const webVersion = url?.searchParams.get('v');
+  const agentVersion = getAgentVersion();
+
+  // Send agent version info to client
+  if (ws.readyState === WebSocket.OPEN) {
+    const versionMessage: WSStatusMessageFromAgent = {
+      type: 'version-info',
+      agentVersion,
+    };
+    ws.send(JSON.stringify(versionMessage));
+  }
+
+  // Check if update needed (only upgrade, never downgrade)
+  if (webVersion && !isUpdateInProgress() && needsUpdate(agentVersion, webVersion)) {
+    console.log(`[Update] Version mismatch detected: agent=${agentVersion} web=${webVersion}`);
+
+    // Delay update to allow client connection to stabilize
+    setTimeout(() => {
+      triggerUpdate(webVersion);
+    }, 2000);
+  }
 
   // Send initial session list
   (async () => {

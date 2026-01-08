@@ -26,7 +26,34 @@ pnpm build            # Build all packages
 pnpm typecheck        # TypeScript type checking
 pnpm lint             # Lint all packages
 
+# Release (semantic versioning based on conventional commits)
+pnpm release          # Run tests, bump version, changelog, commit, tag, push
+pnpm release --dry-run    # Preview without making changes
+pnpm release --skip-tests # Skip tests
+pnpm release --no-push    # Don't push to remote
 ```
+
+## Release Process
+
+The `pnpm release` command automates semantic versioning based on conventional commits:
+
+| Commit Type | Version Bump |
+|-------------|--------------|
+| `feat:` | Minor (0.1.0 -> 0.2.0) |
+| `fix:`, `perf:`, `refactor:` | Patch (0.1.0 -> 0.1.1) |
+| `BREAKING CHANGE` or `!:` | Major (0.1.0 -> 1.0.0) |
+| `chore:`, `docs:`, `test:` | Patch |
+
+**Workflow:**
+1. Pre-flight checks (uncommitted changes, branch)
+2. Run `pnpm test`
+3. Analyze commits since last tag
+4. Update all 5 package.json files
+5. Update CLI version string
+6. Generate CHANGELOG.md entry
+7. Create commit: `chore(release): vX.Y.Z`
+8. Create git tag: `vX.Y.Z`
+9. Push to remote
 
 ## Architecture
 

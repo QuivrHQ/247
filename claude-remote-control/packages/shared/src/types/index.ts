@@ -92,7 +92,9 @@ export type WSStatusMessageFromAgent =
   | { type: 'sessions-list'; sessions: WSSessionInfo[] }
   | { type: 'status-update'; session: WSSessionInfo }
   | { type: 'session-removed'; sessionName: string }
-  | { type: 'session-archived'; sessionName: string; session: WSSessionInfo };
+  | { type: 'session-archived'; sessionName: string; session: WSSessionInfo }
+  | { type: 'version-info'; agentVersion: string }
+  | { type: 'update-pending'; targetVersion: string; message: string };
 
 // API types
 export interface RegisterMachineRequest {

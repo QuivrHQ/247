@@ -114,7 +114,7 @@ export async function createServer() {
 
     if (url.pathname === '/status') {
       wss.handleUpgrade(req, socket, head, (ws) => {
-        handleStatusConnection(ws);
+        handleStatusConnection(ws, url);
       });
       return;
     }

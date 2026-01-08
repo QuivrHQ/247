@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CornerDownLeft,
-  ChevronsUp,
-  ChevronsDown,
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ANSI escape sequences for arrow keys
@@ -25,7 +17,6 @@ const KEYS = {
 
 interface MobileKeybarProps {
   onKeyPress: (key: string) => void;
-  onScroll: (direction: 'up' | 'down') => void;
   /** Controls visibility with slide animation */
   visible?: boolean;
 }
@@ -56,7 +47,7 @@ function KeyButton({ onClick, children, label, className }: KeyButtonProps) {
   );
 }
 
-export function MobileKeybar({ onKeyPress, onScroll, visible = true }: MobileKeybarProps) {
+export function MobileKeybar({ onKeyPress, visible = true }: MobileKeybarProps) {
   // When hidden, completely remove from layout (h-0 + overflow-hidden)
   // This allows the terminal to expand and fill the space
   if (!visible) {
@@ -69,33 +60,20 @@ export function MobileKeybar({ onKeyPress, onScroll, visible = true }: MobileKey
         'flex flex-col gap-1.5 border-t border-white/5 bg-[#0d0d14]/95 px-2 py-2 backdrop-blur-sm'
       )}
     >
-      {/* Row 1: Scroll + Arrow Navigation */}
-      <div className="flex items-center justify-between gap-1">
-        {/* Scroll buttons */}
-        <div className="flex gap-1">
-          <KeyButton onClick={() => onScroll('up')} label="Page Up">
-            <ChevronsUp className="h-5 w-5" />
-          </KeyButton>
-          <KeyButton onClick={() => onScroll('down')} label="Page Down">
-            <ChevronsDown className="h-5 w-5" />
-          </KeyButton>
-        </div>
-
-        {/* Arrow keys */}
-        <div className="flex gap-1">
-          <KeyButton onClick={() => onKeyPress(KEYS.LEFT)} label="Left Arrow">
-            <ChevronLeft className="h-5 w-5" />
-          </KeyButton>
-          <KeyButton onClick={() => onKeyPress(KEYS.UP)} label="Up Arrow">
-            <ChevronUp className="h-5 w-5" />
-          </KeyButton>
-          <KeyButton onClick={() => onKeyPress(KEYS.DOWN)} label="Down Arrow">
-            <ChevronDown className="h-5 w-5" />
-          </KeyButton>
-          <KeyButton onClick={() => onKeyPress(KEYS.RIGHT)} label="Right Arrow">
-            <ChevronRight className="h-5 w-5" />
-          </KeyButton>
-        </div>
+      {/* Row 1: Arrow Navigation */}
+      <div className="flex items-center justify-end gap-1">
+        <KeyButton onClick={() => onKeyPress(KEYS.LEFT)} label="Left Arrow">
+          <ChevronLeft className="h-5 w-5" />
+        </KeyButton>
+        <KeyButton onClick={() => onKeyPress(KEYS.UP)} label="Up Arrow">
+          <ChevronUp className="h-5 w-5" />
+        </KeyButton>
+        <KeyButton onClick={() => onKeyPress(KEYS.DOWN)} label="Down Arrow">
+          <ChevronDown className="h-5 w-5" />
+        </KeyButton>
+        <KeyButton onClick={() => onKeyPress(KEYS.RIGHT)} label="Right Arrow">
+          <ChevronRight className="h-5 w-5" />
+        </KeyButton>
       </div>
 
       {/* Row 2: Action keys */}

@@ -101,18 +101,6 @@ describe('MobileKeybar', () => {
       onKeyPress(KEYS.CTRL_C);
       expect(onKeyPress).toHaveBeenCalledWith('\x03');
     });
-
-    it('scrolls up when page up button is pressed', () => {
-      const onScroll = vi.fn();
-      onScroll('up');
-      expect(onScroll).toHaveBeenCalledWith('up');
-    });
-
-    it('scrolls down when page down button is pressed', () => {
-      const onScroll = vi.fn();
-      onScroll('down');
-      expect(onScroll).toHaveBeenCalledWith('down');
-    });
   });
 
   describe('Integration with terminal', () => {
@@ -269,26 +257,28 @@ describe('MobileKeybar', () => {
     });
 
     describe('scroll threshold', () => {
-      const SCROLL_THRESHOLD = 10;
+      const SCROLL_THRESHOLD = 25;
       const shouldTriggerScroll = (deltaY: number): boolean => {
         return Math.abs(deltaY) >= SCROLL_THRESHOLD;
       };
 
       it('ignores small movements below threshold', () => {
         expect(shouldTriggerScroll(5)).toBe(false);
-        expect(shouldTriggerScroll(-8)).toBe(false);
-        expect(shouldTriggerScroll(9)).toBe(false);
-        expect(shouldTriggerScroll(-9)).toBe(false);
+        expect(shouldTriggerScroll(-10)).toBe(false);
+        expect(shouldTriggerScroll(15)).toBe(false);
+        expect(shouldTriggerScroll(-20)).toBe(false);
+        expect(shouldTriggerScroll(24)).toBe(false);
+        expect(shouldTriggerScroll(-24)).toBe(false);
       });
 
       it('triggers scroll at threshold', () => {
-        expect(shouldTriggerScroll(10)).toBe(true);
-        expect(shouldTriggerScroll(-10)).toBe(true);
+        expect(shouldTriggerScroll(25)).toBe(true);
+        expect(shouldTriggerScroll(-25)).toBe(true);
       });
 
       it('triggers scroll above threshold', () => {
-        expect(shouldTriggerScroll(15)).toBe(true);
-        expect(shouldTriggerScroll(-20)).toBe(true);
+        expect(shouldTriggerScroll(30)).toBe(true);
+        expect(shouldTriggerScroll(-40)).toBe(true);
         expect(shouldTriggerScroll(100)).toBe(true);
       });
     });

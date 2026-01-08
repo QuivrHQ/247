@@ -69,7 +69,6 @@ export function Terminal({
     copySelection,
     startClaude,
     sendInput,
-    scrollTerminal,
     triggerResize,
   } = useTerminalConnection({
     terminalRef,
@@ -151,7 +150,7 @@ export function Terminal({
       {isMobile && (
         <>
           <KeybarToggleButton isVisible={keybarVisible} onToggle={toggleKeybar} />
-          <MobileKeybar onKeyPress={sendInput} onScroll={scrollTerminal} visible={keybarVisible} />
+          <MobileKeybar onKeyPress={sendInput} visible={keybarVisible} />
         </>
       )}
     </div>

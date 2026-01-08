@@ -6,7 +6,6 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { CanvasAddon } from '@xterm/addon-canvas';
-import type { RalphLoopConfig } from '@vibecompany/247-shared';
 import {
   TERMINAL_THEME,
   WS_RECONNECT_BASE_DELAY,
@@ -23,7 +22,6 @@ interface UseTerminalConnectionProps {
   project: string;
   sessionName: string;
   environmentId?: string;
-  ralphConfig?: RalphLoopConfig;
   onSessionCreated?: (name: string) => void;
   onCopySuccess: () => void;
   /** Mobile mode - use smaller font and handle orientation changes */
@@ -36,7 +34,6 @@ export function useTerminalConnection({
   project,
   sessionName,
   environmentId,
-  ralphConfig,
   onSessionCreated,
   onCopySuccess,
   isMobile = false,
@@ -286,8 +283,9 @@ export function useTerminalConnection({
             const currentY = e.touches[0].clientY;
             const deltaY = currentY - lastTouchY;
 
-            // Minimum threshold to avoid micro-movements causing jitter
-            if (Math.abs(deltaY) < 10) {
+            // Minimum threshold to reduce scroll sensitivity
+            // Higher value = less frequent scroll events = smoother feel
+            if (Math.abs(deltaY) < 25) {
               return;
             }
 
@@ -423,32 +421,6 @@ export function useTerminalConnection({
           JSON.stringify({ type: 'resize', cols: currentTerm.cols, rows: currentTerm.rows })
         );
         if (onSessionCreated && sessionName) onSessionCreated(sessionName);
-
-        if (ralphConfig) {
-          currentTerm.write('\x1b[38;5;141m🔄 Starting Ralph Loop...\x1b[0m\r\n');
-          currentTerm.write(
-            '\x1b[38;5;245m   Prompt: ' +
-              ralphConfig.prompt.substring(0, 50) +
-              (ralphConfig.prompt.length > 50 ? '...' : '') +
-              '\x1b[0m\r\n'
-          );
-          if (ralphConfig.maxIterations)
-            currentTerm.write(
-              '\x1b[38;5;245m   Max iterations: ' + ralphConfig.maxIterations + '\x1b[0m\r\n'
-            );
-          if (ralphConfig.completionPromise)
-            currentTerm.write(
-              '\x1b[38;5;245m   Completion promise: ' +
-                ralphConfig.completionPromise +
-                '\x1b[0m\r\n'
-            );
-          if (ralphConfig.trustMode)
-            currentTerm.write(
-              '\x1b[38;5;208m   🛡️  Trust Mode: ENABLED (auto-accept all tools)\x1b[0m\r\n'
-            );
-          currentTerm.write('\r\n');
-          currentWs.send(JSON.stringify({ type: 'start-claude-ralph', config: ralphConfig }));
-        }
 
         // Start adaptive heartbeat to detect silent disconnections
         startHeartbeat();
@@ -690,7 +662,7 @@ export function useTerminalConnection({
     // Note: onSessionCreated, onCopySuccess, and terminalRef are intentionally excluded
     // from deps - they are refs/callbacks that shouldn't cause reconnection
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentUrl, project, sessionName, environmentId, ralphConfig]);
+  }, [agentUrl, project, sessionName, environmentId]);
 
   // Separate effect to handle isMobile changes dynamically
   // This updates font size without recreating the terminal (more efficient)

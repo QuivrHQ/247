@@ -87,6 +87,7 @@ export function HomeContent() {
           onNewSession={() => setNewSessionOpen(true)}
           onOpenGuide={() => setGuideOpen(true)}
           onOpenEnvironments={() => setEnvironmentsOpen(true)}
+          onSessionKilled={handleSessionKilled}
         />
       )}
 

@@ -1,18 +1,18 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  Zap,
   Wifi,
-  HelpCircle,
   Shield,
-  HardDrive,
   Globe,
-  Server,
-  Database,
-  Monitor,
-  Cloud,
+  HardDrive,
   Lock,
+  ArrowRight,
+  Smartphone,
+  Laptop,
+  Monitor,
+  HelpCircle,
 } from 'lucide-react';
 import {
   AgentConnectionSettings,
@@ -26,392 +26,340 @@ interface NoConnectionViewProps {
   onConnectionSaved: (connection: ReturnType<typeof saveAgentConnection>) => void;
 }
 
-// Animation variants for staggered entrance
+// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
+      staggerChildren: 0.12,
+      delayChildren: 0.3,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
-const featureCardVariants = {
-  hidden: { opacity: 0, y: 30, scale: 0.95 },
+const cardVariants = {
+  hidden: { opacity: 0, y: 40, scale: 0.95 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
-// Feature card data
-const features = [
-  {
-    icon: Shield,
-    title: 'Privacy First',
-    description: 'Zero cloud storage. Your sessions live entirely on your machines.',
-    gradient: 'from-emerald-500 to-green-600',
-  },
-  {
-    icon: HardDrive,
-    title: 'Local Control',
-    description: 'SQLite databases on each agent. Full ownership of your data.',
-    gradient: 'from-blue-500 to-indigo-600',
-  },
-  {
-    icon: Globe,
-    title: 'Access Anywhere',
-    description: 'Secure tunnels connect you to your agents from any device.',
-    gradient: 'from-purple-500 to-violet-600',
-  },
-  {
-    icon: Server,
-    title: 'Multi-Machine',
-    description: 'Connect unlimited agents. Each with its own database.',
-    gradient: 'from-orange-500 to-amber-500',
-  },
-];
-
-// Animated Architecture Diagram Component
-function ArchitectureDiagram() {
+// Giant 247 Background Typography
+function HeroBackground() {
   return (
-    <div className="relative mx-auto w-full max-w-3xl">
-      <svg
-        viewBox="0 0 800 300"
-        className="h-auto w-full"
-        style={{ filter: 'drop-shadow(0 0 40px rgba(249, 115, 22, 0.1))' }}
-      >
-        {/* Gradient definitions */}
-        <defs>
-          <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#f59e0b" />
-          </linearGradient>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* Animated gradient orbs */}
+      <motion.div
+        className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-orange-500/10 blur-[120px]"
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute -bottom-32 -right-32 h-[600px] w-[600px] rounded-full bg-amber-500/10 blur-[150px]"
+        animate={{
+          scale: [1.2, 1, 1.2],
+          opacity: [0.4, 0.2, 0.4],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+      />
 
-          <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#6366f1" />
-          </linearGradient>
-
-          <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="100%" stopColor="#22c55e" />
-          </linearGradient>
-
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Connection lines with animation */}
-        <g className="connection-lines">
-          {/* Browser to Dashboard */}
-          <motion.line
-            x1="140"
-            y1="150"
-            x2="280"
-            y2="150"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth="2"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-          />
-
-          {/* Animated data pulse - Browser to Dashboard */}
-          <motion.circle
-            r="4"
-            fill="url(#orangeGradient)"
-            filter="url(#glow)"
-            initial={{ opacity: 0 }}
+      {/* Giant 247 Typography */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, ease: 'easeOut' }}
+          className="relative select-none"
+        >
+          <motion.span
+            className="font-display text-[20vw] font-black leading-none tracking-tighter text-white/[0.03] sm:text-[25vw] lg:text-[30vw]"
             animate={{
-              opacity: [0, 1, 1, 0],
-              cx: [140, 210, 280, 280],
-              cy: [150, 150, 150, 150],
+              opacity: [0.03, 0.05, 0.03],
             }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              repeatDelay: 1,
-              delay: 1.5,
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            247
+          </motion.span>
+
+          {/* Glow layer */}
+          <motion.span
+            className="font-display absolute inset-0 text-[20vw] font-black leading-none tracking-tighter text-orange-500/[0.02] blur-xl sm:text-[25vw] lg:text-[30vw]"
+            animate={{
+              opacity: [0.02, 0.04, 0.02],
             }}
-          />
-
-          {/* Dashboard to Tunnel zone */}
-          <motion.line
-            x1="420"
-            y1="150"
-            x2="520"
-            y2="150"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth="2"
-            strokeDasharray="6 4"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          />
-
-          {/* Tunnel indicator */}
-          <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
-            <rect
-              x="445"
-              y="135"
-              width="50"
-              height="30"
-              rx="6"
-              fill="rgba(249, 115, 22, 0.1)"
-              stroke="rgba(249, 115, 22, 0.3)"
-              strokeWidth="1"
-              className="animate-tunnel-glow"
-            />
-            <text
-              x="470"
-              y="155"
-              textAnchor="middle"
-              className="fill-orange-400 font-mono text-[10px]"
-            >
-              TLS
-            </text>
-          </motion.g>
-
-          {/* Tunnel to Agents (split into 2) */}
-          {[100, 200].map((y, i) => (
-            <g key={i}>
-              <motion.path
-                d={`M 520 150 Q 580 ${150 + (y - 150) * 0.3} 620 ${y}`}
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="2"
-                fill="none"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.6, delay: 1 + i * 0.15 }}
-              />
-
-              {/* Animated pulse to each agent */}
-              <motion.circle
-                r="3"
-                fill="url(#greenGradient)"
-                filter="url(#glow)"
-                initial={{ opacity: 0 }}
-                animate={{
-                  opacity: [0, 1, 1, 0],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  repeatDelay: 2,
-                  delay: 2 + i * 0.5,
-                }}
-              >
-                <animateMotion
-                  dur="1.5s"
-                  repeatCount="indefinite"
-                  path={`M 520 150 Q 580 ${150 + (y - 150) * 0.3} 620 ${y}`}
-                  begin={`${2 + i * 0.5}s`}
-                />
-              </motion.circle>
-            </g>
-          ))}
-        </g>
-
-        {/* Browser Node */}
-        <motion.g
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <rect
-            x="60"
-            y="110"
-            width="80"
-            height="80"
-            rx="16"
-            fill="rgba(255,255,255,0.03)"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth="1"
-          />
-          <foreignObject x="80" y="122" width="40" height="40">
-            <Monitor className="h-10 w-10 text-white/60" />
-          </foreignObject>
-          <text
-            x="100"
-            y="175"
-            textAnchor="middle"
-            className="fill-white/40 text-[11px] font-medium"
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           >
-            You
-          </text>
-        </motion.g>
+            247
+          </motion.span>
+        </motion.div>
+      </div>
 
-        {/* Dashboard Node (Vercel) */}
-        <motion.g
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <rect
-            x="280"
-            y="100"
-            width="140"
-            height="100"
-            rx="16"
-            fill="rgba(249, 115, 22, 0.05)"
-            stroke="rgba(249, 115, 22, 0.2)"
-            strokeWidth="1"
-          />
-          <foreignObject x="330" y="112" width="40" height="40">
-            <Cloud className="h-10 w-10 text-orange-400/80" />
-          </foreignObject>
-          <text
-            x="350"
-            y="168"
-            textAnchor="middle"
-            className="fill-white/70 text-[11px] font-semibold"
-          >
-            Dashboard
-          </text>
-          <text x="350" y="183" textAnchor="middle" className="fill-white/30 font-mono text-[9px]">
-            Stateless / Vercel
-          </text>
-        </motion.g>
-
-        {/* Agent Nodes */}
-        {[
-          { y: 70, name: 'Agent 1', status: 'active' },
-          { y: 170, name: 'Agent 2', status: 'active' },
-        ].map((agent, i) => (
-          <motion.g
-            key={i}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 + i * 0.15 }}
-          >
-            <rect
-              x="620"
-              y={agent.y}
-              width="140"
-              height="60"
-              rx="12"
-              fill="rgba(16, 185, 129, 0.05)"
-              stroke={
-                agent.status === 'active' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)'
-              }
-              strokeWidth="1"
-            />
-
-            {/* Agent icon */}
-            <foreignObject x="630" y={agent.y + 12} width="36" height="36">
-              <Server className="h-9 w-9 text-emerald-400/70" />
-            </foreignObject>
-
-            {/* SQLite indicator */}
-            <foreignObject x="713" y={agent.y + 16} width="28" height="28">
-              <Database className="h-7 w-7 text-blue-400/50" />
-            </foreignObject>
-
-            <text x="680" y={agent.y + 42} className="fill-white/60 text-[10px] font-medium">
-              {agent.name}
-            </text>
-
-            {/* Status dot */}
-            <circle
-              cx="635"
-              cy={agent.y + 10}
-              r="3"
-              fill={agent.status === 'active' ? '#10b981' : 'rgba(255,255,255,0.2)'}
-            />
-          </motion.g>
-        ))}
-
-        {/* Labels */}
-        <motion.text
-          x="690"
-          y="265"
-          textAnchor="middle"
-          className="fill-white/20 font-mono text-[10px] uppercase tracking-wider"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
-          Local Agents (Your Macs)
-        </motion.text>
-
-        <motion.text
-          x="350"
-          y="265"
-          textAnchor="middle"
-          className="fill-white/20 font-mono text-[10px] uppercase tracking-wider"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.3 }}
-        >
-          Cloud (No Data Stored)
-        </motion.text>
-      </svg>
+      {/* Subtle grid overlay */}
+      <div
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
     </div>
   );
 }
 
-// Feature Card Component
-function FeatureCard({
+// Orbital Visualization
+function OrbitalVisualization() {
+  const rings = [
+    { radius: 80, duration: 20, delay: 0 },
+    { radius: 110, duration: 30, delay: 0.2 },
+    { radius: 140, duration: 25, delay: 0.4 },
+  ];
+
+  const devices = [
+    { angle: 45, icon: Smartphone, ringIndex: 0 },
+    { angle: 165, icon: Laptop, ringIndex: 1 },
+    { angle: 285, icon: Monitor, ringIndex: 2 },
+  ];
+
+  return (
+    <div className="relative mx-auto flex h-[320px] w-[320px] items-center justify-center">
+      {/* Background Glows */}
+      <div className="absolute inset-0 rounded-full bg-orange-500/5 blur-3xl" />
+
+      {/* Rings */}
+      {rings.map((ring, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full border border-white/[0.03] shadow-[inset_0_0_20px_rgba(255,255,255,0.01)]"
+          style={{
+            width: ring.radius * 2,
+            height: ring.radius * 2,
+          }}
+        />
+      ))}
+
+      {/* Rotating Particles on Rings */}
+      {rings.map((ring, i) => (
+        <motion.div
+          key={`particle-${i}`}
+          className="absolute"
+          style={{
+            width: ring.radius * 2,
+            height: ring.radius * 2,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{
+            duration: ring.duration,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        >
+          <div className="absolute left-1/2 top-0 -ml-[1px] h-2 w-[2px] bg-gradient-to-b from-orange-400/0 via-orange-400 to-orange-400/0 shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
+        </motion.div>
+      ))}
+
+      {/* Center Hub */}
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="relative z-20 flex h-16 w-16 items-center justify-center rounded-full bg-[#0a0a10] shadow-2xl shadow-black/50 ring-1 ring-white/10"
+      >
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 to-transparent opacity-50" />
+        <HardDrive className="relative h-6 w-6 text-orange-200" />
+        {/* Breathing Ring */}
+        <motion.div
+          className="absolute -inset-2 rounded-full border border-orange-500/20"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
+      </motion.div>
+
+      {/* Connected Devices */}
+      {devices.map((device, i) => {
+        const ring = rings[device.ringIndex];
+        const radius = ring.radius;
+        const x = Math.cos((device.angle * Math.PI) / 180) * radius;
+        const y = Math.sin((device.angle * Math.PI) / 180) * radius;
+        const Icon = device.icon;
+
+        return (
+          <React.Fragment key={i}>
+            {/* Connection Line (SVG) */}
+            <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible">
+              <motion.line
+                x1="160" // Center 320/2
+                y1="160"
+                x2={160 + x}
+                y2={160 + y}
+                stroke="url(#gradient-line)"
+                strokeWidth="1"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.2 }}
+                transition={{ duration: 1, delay: 0.5 + i * 0.2 }}
+              />
+              <defs>
+                <linearGradient id="gradient-line" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#f97316" stopOpacity="0" />
+                  <stop offset="50%" stopColor="#f97316" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            {/* Device Node */}
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.8 + i * 0.1, type: 'spring', stiffness: 200 }}
+              className="absolute z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#0a0a10] text-white/60 shadow-lg transition-colors hover:border-orange-500/50 hover:text-orange-400"
+              style={{
+                transform: `translate(${x}px, ${y}px)`,
+              }}
+            >
+              <Icon className="h-4 w-4" />
+            </motion.div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// Status Badge Component
+function StatusBadge() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2, duration: 0.5 }}
+      className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 backdrop-blur-sm"
+    >
+      <motion.div
+        className="h-2 w-2 rounded-full bg-orange-400"
+        animate={{
+          opacity: [1, 0.4, 1],
+          scale: [1, 0.9, 1],
+        }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+      />
+      <span className="font-mono text-xs font-medium tracking-wide text-orange-400">
+        READY TO CONNECT
+      </span>
+    </motion.div>
+  );
+}
+
+// Value proposition cards data
+const valueProps = [
+  {
+    icon: Shield,
+    title: 'Privacy First',
+    description: "Zero tracking. No analytics. We don't collect any information. Period.",
+    gradient: 'from-emerald-500 to-green-600',
+    iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+    iconColor: 'text-emerald-400',
+  },
+  {
+    icon: Globe,
+    title: '24/7 Access',
+    description: 'From your phone, tablet, or any browser. Claude Code is always available.',
+    gradient: 'from-blue-500 to-indigo-600',
+    iconBg: 'bg-blue-500/10 border-blue-500/20',
+    iconColor: 'text-blue-400',
+  },
+  {
+    icon: HardDrive,
+    title: 'Runs Locally',
+    description: 'Everything stays on YOUR machine. No cloud servers. Full control.',
+    gradient: 'from-orange-500 to-amber-500',
+    iconBg: 'bg-orange-500/10 border-orange-500/20',
+    iconColor: 'text-orange-400',
+  },
+];
+
+// Value Proposition Card
+function ValueCard({
   icon: Icon,
   title,
   description,
-  gradient,
+  iconBg,
+  iconColor,
   index,
 }: {
   icon: typeof Shield;
   title: string;
   description: string;
+  iconBg: string;
+  iconColor: string;
   gradient: string;
   index: number;
 }) {
   return (
     <motion.div
-      variants={featureCardVariants}
+      variants={cardVariants}
       custom={index}
-      className="group relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]"
+      className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]"
     >
-      {/* Hover glow effect */}
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-        <div
-          className={cn(
-            'absolute -inset-px rounded-2xl bg-gradient-to-br opacity-10 blur-xl',
-            gradient
-          )}
-        />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
+      <div className={cn('mb-4 inline-flex rounded-xl border p-3', iconBg)}>
+        <Icon className={cn('h-6 w-6', iconColor)} />
       </div>
 
-      <div className="relative">
-        <div className={cn('mb-4 inline-flex rounded-xl bg-gradient-to-br p-3', gradient)}>
-          <Icon className="h-5 w-5 text-white" />
-        </div>
-
-        <h3 className="mb-2 text-base font-semibold text-white">{title}</h3>
-
-        <p className="text-sm leading-relaxed text-white/40">{description}</p>
-      </div>
+      <h3 className="mb-2 text-lg font-semibold text-white">{title}</h3>
+      <p className="text-sm leading-relaxed text-white/50">{description}</p>
     </motion.div>
   );
 }
 
+// CTA Button
+function CTAButton({ onClick }: { onClick: () => void }) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className={cn(
+        'group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-2xl px-10 py-5 font-semibold transition-all',
+        'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+        'shadow-xl shadow-orange-500/25',
+        'hover:shadow-2xl hover:shadow-orange-500/30'
+      )}
+    >
+      {/* Animated shine */}
+      <motion.div
+        className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent"
+        animate={{ translateX: ['-100%', '200%'] }}
+        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+      />
+
+      {/* Glow ring */}
+      <div className="absolute -inset-1 -z-10 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 opacity-50 blur-lg transition-opacity group-hover:opacity-75" />
+
+      <Wifi className="h-5 w-5" />
+      <span className="text-lg">Connect Your Agent</span>
+      <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+    </motion.button>
+  );
+}
+
+// Main Component
 export function NoConnectionView({
   modalOpen,
   onModalOpenChange,
@@ -419,145 +367,105 @@ export function NoConnectionView({
 }: NoConnectionViewProps) {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a0a10] selection:bg-orange-500/20">
-      {/* Dot Grid Background */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: `radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)`,
-          backgroundSize: '24px 24px',
-        }}
-      />
-
-      {/* Ambient Background Gradients */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute left-1/4 top-0 h-[600px] w-[600px] rounded-full bg-orange-500/[0.08] mix-blend-screen blur-[150px]"
-          animate={{
-            x: [0, 30, 0],
-            y: [0, 20, 0],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute bottom-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-500/[0.08] mix-blend-screen blur-[150px]"
-          animate={{
-            x: [0, -20, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.05] mix-blend-screen blur-[120px]"
-          animate={{
-            scale: [1, 1.1, 1],
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
+      <HeroBackground />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-6xl px-6 py-12 lg:py-16">
+      <div className="relative z-10 mx-auto max-w-5xl px-6 py-12 lg:py-20">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
           className="flex flex-col items-center"
         >
-          {/* Hero Section */}
-          <motion.div variants={itemVariants} className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10">
-              <Zap className="h-5 w-5 text-orange-400" />
-            </div>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs text-white/50">
-              v0.1.0
-            </span>
+          {/* Status Badge */}
+          <motion.div variants={itemVariants}>
+            <StatusBadge />
           </motion.div>
 
-          <motion.h1
-            variants={itemVariants}
-            className="font-display mb-4 text-center text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl"
-          >
-            <span className="bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-transparent">
-              Remote Control for
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-              Claude Code
-            </span>
-          </motion.h1>
+          {/* Hero Headline */}
+          <motion.div variants={itemVariants} className="mt-8 text-center">
+            <h1 className="font-display text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+              Claude Code.
+              <br />
+              <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">
+                Anywhere. Anytime.
+              </span>
+            </h1>
+          </motion.div>
 
+          {/* Subheadline */}
           <motion.p
             variants={itemVariants}
-            className="mb-10 max-w-xl text-center text-base leading-relaxed text-white/40 sm:text-lg"
+            className="mt-6 max-w-2xl text-balance text-center text-lg leading-relaxed text-white/60 sm:text-xl"
           >
-            Access your local Claude Code agents from anywhere. Monitor sessions, approve commands,
-            and stay in control.
+            Access your local Claude Code sessions securely from any device,{' '}
+            <span className="text-white/80">24 hours a day, 7 days a week</span>.
           </motion.p>
 
-          {/* Architecture Diagram */}
-          <motion.div variants={itemVariants} className="mb-12 w-full">
-            <ArchitectureDiagram />
+          {/* CTA Button */}
+          <motion.div variants={itemVariants} className="mt-10 flex flex-col items-center gap-4">
+            <CTAButton onClick={() => onModalOpenChange(true)} />
+
+            <button
+              onClick={() => window.open('https://tailscale.com', '_blank')}
+              className="group flex items-center gap-2 rounded-full px-4 py-2 text-sm text-white/40 transition-all hover:bg-white/5 hover:text-white/60"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span>How does this work?</span>
+            </button>
           </motion.div>
 
-          {/* Feature Cards */}
+          {/* Security Badge */}
           <motion.div
             variants={itemVariants}
-            className="mb-12 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-8 flex items-center gap-2 text-sm text-white/40"
           >
-            {features.map((feature, index) => (
-              <FeatureCard key={feature.title} {...feature} index={index} />
+            <Lock className="h-4 w-4" />
+            <span>End-to-end encrypted. Your data never leaves your machine.</span>
+          </motion.div>
+
+          {/* Orbital Visualization */}
+          <motion.div variants={itemVariants} className="mt-12 lg:mt-16">
+            <OrbitalVisualization />
+          </motion.div>
+
+          {/* Value Props */}
+          <motion.div
+            variants={itemVariants}
+            className="mt-16 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3"
+          >
+            {valueProps.map((prop, index) => (
+              <ValueCard key={prop.title} {...prop} index={index} />
             ))}
           </motion.div>
 
-          {/* CTA Section */}
+          {/* Bottom Explanation */}
           <motion.div
             variants={itemVariants}
-            className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6"
+            className="mt-16 max-w-2xl rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 text-center backdrop-blur-sm"
           >
-            <button
-              onClick={() => onModalOpenChange(true)}
-              className={cn(
-                'group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-2xl px-8 py-4 font-semibold transition-all',
-                'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
-                'hover:scale-[1.02] hover:shadow-[0_0_50px_-12px_rgba(249,115,22,0.5)]',
-                'active:scale-[0.98]'
-              )}
-            >
-              {/* Button shine effect */}
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-
-              <Wifi className="h-5 w-5" />
-              <span>Connect Your Agent</span>
-              <div className="mx-1 h-4 w-px bg-white/20" />
-              <Lock className="h-4 w-4 opacity-60" />
-            </button>
-
-            <a
-              href="https://docs.anthropic.com/en/docs/agents-and-tools/claude-code"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                'inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4 font-medium transition-all',
-                'border border-white/5 bg-white/5 text-white/60',
-                'hover:border-white/10 hover:bg-white/10 hover:text-white'
-              )}
-            >
-              <HelpCircle className="h-5 w-5" />
-              <span>View Guide</span>
-            </a>
+            <p className="mb-3 font-mono text-sm text-orange-400/80">Why 24x7?</p>
+            <p className="text-balance text-white/60">
+              <span className="font-semibold text-white">24</span> hours a day.{' '}
+              <span className="font-semibold text-white">7</span> days a week.
+              <br />
+              <span className="text-white/40">
+                Always-on access to Claude Code from anywhere in the world.
+              </span>
+            </p>
           </motion.div>
 
-          {/* Bottom tagline */}
+          {/* Footer */}
           <motion.p
             variants={itemVariants}
-            className="mt-12 text-center font-mono text-xs text-white/20"
+            className="mt-12 text-center font-mono text-xs text-white/30"
           >
-            Your data stays on your machines. Always.
+            Built for developers who value privacy and control.
           </motion.p>
         </motion.div>
       </div>
 
-      {/* Connection Settings Slide-Over */}
+      {/* Connection Settings Modal */}
       <AgentConnectionSettings
         open={modalOpen}
         onOpenChange={onModalOpenChange}

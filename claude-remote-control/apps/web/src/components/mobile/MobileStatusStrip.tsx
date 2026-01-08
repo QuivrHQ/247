@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Plus, Search, HelpCircle, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { cn, buildApiUrl } from '@/lib/utils';
 import { StatusRing } from '@/components/ui/StatusRing';
 import { SessionMiniCard } from './SessionMiniCard';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
@@ -22,6 +23,8 @@ export interface MobileStatusStripProps {
   onNewSession: () => void;
   onOpenGuide?: () => void;
   onOpenEnvironments?: () => void;
+  /** Called when a session is killed (to deselect if it was selected) */
+  onSessionKilled?: (machineId: string, sessionName: string) => void;
 }
 
 function getStatusColor(status: SessionStatus): string {
@@ -45,10 +48,66 @@ export function MobileStatusStrip({
   onNewSession,
   onOpenGuide,
   onOpenEnvironments,
+  onSessionKilled,
 }: MobileStatusStripProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [filter, setFilter] = useState<MobileFilterType>('all');
   const [search, setSearch] = useState('');
+
+  // Kill session handler
+  const handleKillSession = useCallback(
+    async (session: SessionWithMachine) => {
+      try {
+        const response = await fetch(
+          buildApiUrl(session.agentUrl, `/api/sessions/${encodeURIComponent(session.name)}`),
+          { method: 'DELETE' }
+        );
+
+        if (response.ok) {
+          toast.success('Session terminated');
+          // If we killed the selected session, notify parent
+          if (currentSession?.sessionName === session.name) {
+            onSessionKilled?.(session.machineId, session.name);
+          }
+        } else {
+          toast.error('Failed to terminate session');
+        }
+      } catch (err) {
+        console.error('Failed to kill session:', err);
+        toast.error('Could not connect to agent');
+      }
+    },
+    [currentSession, onSessionKilled]
+  );
+
+  // Archive session handler
+  const handleArchiveSession = useCallback(
+    async (session: SessionWithMachine) => {
+      try {
+        const response = await fetch(
+          buildApiUrl(
+            session.agentUrl,
+            `/api/sessions/${encodeURIComponent(session.name)}/archive`
+          ),
+          { method: 'POST' }
+        );
+
+        if (response.ok) {
+          toast.success('Session archived');
+          // If we archived the selected session, notify parent
+          if (currentSession?.sessionName === session.name) {
+            onSessionKilled?.(session.machineId, session.name);
+          }
+        } else {
+          toast.error('Failed to archive session');
+        }
+      } catch (err) {
+        console.error('Failed to archive session:', err);
+        toast.error('Could not connect to agent');
+      }
+    },
+    [currentSession, onSessionKilled]
+  );
 
   // Close on Escape key
   useEffect(() => {
@@ -356,6 +415,8 @@ export function MobileStatusStrip({
                       onClick={() =>
                         handleSessionSelect(session.machineId, session.name, session.project)
                       }
+                      onKill={() => handleKillSession(session)}
+                      onArchive={() => handleArchiveSession(session)}
                     />
                   ))}
                 </div>

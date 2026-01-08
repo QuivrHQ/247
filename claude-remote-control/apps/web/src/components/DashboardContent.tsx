@@ -25,6 +25,8 @@ interface DashboardContentProps {
   onTabChange: (tab: ViewTab | null) => void;
   onSelectSession: (machineId: string, sessionName: string) => void; // Kept (maybe used by other components?)
   onNewSession: () => void;
+  /** Mobile mode for responsive styling */
+  isMobile?: boolean;
 }
 
 export function DashboardContent({
@@ -32,54 +34,58 @@ export function DashboardContent({
   activeTab,
   onTabChange,
   onNewSession,
+  isMobile = false,
 }: DashboardContentProps) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Tabs */}
-      <div className="border-b border-white/5 px-6 pt-4">
-        <div className="flex gap-1">
-          {/* Welcome Tab (hidden/implicit or explicit?) - Let's use a "Home" icon maybe or just keep tabs for Settings/Guide */}
+      <div className={cn('border-b border-white/5 pt-4', isMobile ? 'px-3' : 'px-6')}>
+        <div className={cn('flex', isMobile ? 'scrollbar-none gap-0.5 overflow-x-auto' : 'gap-1')}>
+          {/* Welcome Tab */}
           <button
             onClick={() => onTabChange(null)}
             className={cn(
-              '-mb-px flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-all',
+              '-mb-px flex touch-manipulation items-center gap-2 border-b-2 text-sm font-medium transition-all',
+              isMobile ? 'min-h-[44px] whitespace-nowrap px-3 py-2.5' : 'px-4 py-3',
               activeTab === null
                 ? 'border-orange-400 text-orange-400'
                 : 'border-transparent text-white/50 hover:text-white/70'
             )}
           >
             <Zap className="h-4 w-4" />
-            Overview
+            {!isMobile && 'Overview'}
           </button>
           <button
             onClick={() => onTabChange('environments')}
             className={cn(
-              '-mb-px flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-all',
+              '-mb-px flex touch-manipulation items-center gap-2 border-b-2 text-sm font-medium transition-all',
+              isMobile ? 'min-h-[44px] whitespace-nowrap px-3 py-2.5' : 'px-4 py-3',
               activeTab === 'environments'
                 ? 'border-orange-400 text-orange-400'
                 : 'border-transparent text-white/50 hover:text-white/70'
             )}
           >
             <Settings className="h-4 w-4" />
-            Environments
+            {isMobile ? 'Env' : 'Environments'}
           </button>
           <button
             onClick={() => onTabChange('guide')}
             className={cn(
-              '-mb-px flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-all',
+              '-mb-px flex touch-manipulation items-center gap-2 border-b-2 text-sm font-medium transition-all',
+              isMobile ? 'min-h-[44px] whitespace-nowrap px-3 py-2.5' : 'px-4 py-3',
               activeTab === 'guide'
                 ? 'border-orange-400 text-orange-400'
                 : 'border-transparent text-white/50 hover:text-white/70'
             )}
           >
             <HelpCircle className="h-4 w-4" />
-            Connection Guide
+            {isMobile ? 'Guide' : 'Connection Guide'}
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className={cn('flex-1 overflow-auto', isMobile ? 'p-4' : 'p-6')}>
         <AnimatePresence mode="wait">
           {activeTab === null ? (
             <motion.div

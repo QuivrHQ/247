@@ -18,6 +18,8 @@ interface TerminalProps {
   onConnectionChange?: (connected: boolean) => void;
   onSessionCreated?: (sessionName: string) => void;
   claudeStatus?: 'init' | 'working' | 'needs_attention' | 'idle';
+  /** Mobile mode for responsive styling and smaller font */
+  isMobile?: boolean;
 }
 
 export function Terminal({
@@ -29,6 +31,7 @@ export function Terminal({
   onConnectionChange,
   onSessionCreated,
   claudeStatus,
+  isMobile = false,
 }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
@@ -63,6 +66,7 @@ export function Terminal({
     ralphConfig,
     onSessionCreated,
     onCopySuccess: handleCopySuccess,
+    isMobile,
   });
 
   const {
@@ -82,7 +86,7 @@ export function Terminal({
   }, [connected, onConnectionChange]);
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex w-full flex-1 flex-col overflow-hidden">
       <Toolbar
         project={project}
         sessionName={effectiveSessionName}
@@ -94,6 +98,7 @@ export function Terminal({
         onStartClaude={startClaude}
         onCopySelection={copySelection}
         onToggleSearch={toggleSearch}
+        isMobile={isMobile}
       />
 
       <SearchBar
@@ -106,8 +111,9 @@ export function Terminal({
         onClose={closeSearch}
       />
 
-      {/* Terminal container */}
-      <div ref={terminalRef} className="flex-1 bg-[#0a0a10] px-2 py-1" />
+      {/* Terminal container - NO padding! FitAddon reads offsetHeight which includes padding,
+          but xterm renders inside padding box, causing dimension mismatch */}
+      <div ref={terminalRef} className="min-h-0 w-full flex-1 overflow-hidden bg-[#0a0a10]" />
 
       <ScrollToBottomButton visible={!isAtBottom} onClick={scrollToBottom} />
     </div>

@@ -1,16 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { HomeSidebar } from '@/components/HomeSidebar';
 import { DashboardContent } from '@/components/DashboardContent';
 import { SessionView } from '@/components/SessionView';
 import { NewSessionModal } from '@/components/NewSessionModal';
 import { AgentConnectionSettings } from '@/components/AgentConnectionSettings';
+import { MobileSidebarDrawer } from '@/components/MobileSidebarDrawer';
 import { LoadingView } from './LoadingView';
 import { NoConnectionView } from './NoConnectionView';
 import { Header } from './Header';
 import { useHomeState } from './useHomeState';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 export function HomeContent() {
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const {
     loading,
     agentConnection,
@@ -65,12 +71,38 @@ export function HomeContent() {
         onConnectionSettingsClick={() => setConnectionModalOpen(true)}
         onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
         onNewSession={() => setNewSessionOpen(true)}
+        isMobile={isMobile}
+        onMobileMenuClick={() => setMobileMenuOpen(true)}
       />
+
+      {/* Mobile Sidebar Drawer */}
+      {isMobile && (
+        <MobileSidebarDrawer
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          title={`${allSessions.length} Session${allSessions.length !== 1 ? 's' : ''}`}
+        >
+          <HomeSidebar
+            sessions={allSessions}
+            archivedSessions={getArchivedSessions()}
+            selectedSession={selectedSession}
+            onSelectSession={handleSelectSession}
+            onNewSession={() => {
+              setMobileMenuOpen(false);
+              setNewSessionOpen(true);
+            }}
+            onSessionKilled={handleSessionKilled}
+            onSessionArchived={handleSessionArchived}
+            isMobileDrawer={true}
+            onMobileSessionSelect={() => setMobileMenuOpen(false)}
+          />
+        </MobileSidebarDrawer>
+      )}
 
       {/* Main Split View */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        {!isFullscreen && (
+        {/* Desktop Sidebar - hidden on mobile */}
+        {!isFullscreen && !isMobile && (
           <HomeSidebar
             sessions={allSessions}
             archivedSessions={getArchivedSessions()}
@@ -97,6 +129,7 @@ export function HomeContent() {
                 clearSessionFromUrl();
               }}
               onSessionCreated={handleSessionCreated}
+              isMobile={isMobile}
             />
           ) : (
             <DashboardContent
@@ -112,6 +145,7 @@ export function HomeContent() {
                 }
               }}
               onNewSession={() => setNewSessionOpen(true)}
+              isMobile={isMobile}
             />
           )}
         </div>

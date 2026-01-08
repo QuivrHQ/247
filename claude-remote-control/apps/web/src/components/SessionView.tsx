@@ -28,6 +28,8 @@ interface SessionViewProps {
   ralphConfig?: RalphLoopConfig;
   onBack: () => void;
   onSessionCreated?: (sessionName: string) => void;
+  /** Mobile mode for responsive styling */
+  isMobile?: boolean;
 }
 
 export function SessionView({
@@ -39,6 +41,7 @@ export function SessionView({
   ralphConfig,
   onBack,
   onSessionCreated,
+  isMobile = false,
 }: SessionViewProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('terminal');
@@ -59,45 +62,61 @@ export function SessionView({
       {/* Header */}
       <div
         className={cn(
-          'flex items-center justify-between px-4 py-2.5',
+          'flex items-center justify-between',
           'bg-[#0d0d14]/80 backdrop-blur-xl',
-          'border-b border-white/5'
+          'border-b border-white/5',
+          isMobile ? 'px-3 py-2' : 'px-4 py-2.5'
         )}
       >
         {/* Left: Back + Session Info */}
-        <div className="flex items-center gap-4">
+        <div className={cn('flex items-center', isMobile ? 'gap-2' : 'gap-4')}>
           <button
             onClick={onBack}
             className={cn(
-              'flex items-center gap-2 rounded-lg px-3 py-1.5',
+              'flex items-center gap-2 rounded-lg',
               'text-white/50 hover:bg-white/5 hover:text-white',
-              'group transition-all'
+              'group touch-manipulation transition-all',
+              isMobile ? 'min-h-[40px] min-w-[40px] p-2' : 'px-3 py-1.5'
             )}
           >
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-            <span className="text-sm font-medium">Back</span>
+            <ArrowLeft
+              className={cn(
+                'transition-transform group-hover:-translate-x-0.5',
+                isMobile ? 'h-5 w-5' : 'h-4 w-4'
+              )}
+            />
+            {!isMobile && <span className="text-sm font-medium">Back</span>}
           </button>
 
-          <div className="h-5 w-px bg-white/10" />
+          {!isMobile && <div className="h-5 w-px bg-white/10" />}
 
           {/* Session name */}
-          <div className="flex items-center gap-3">
+          <div className={cn('flex items-center', isMobile ? 'gap-2' : 'gap-3')}>
             {sessionInfo && (
-              <StatusBadge status={sessionInfo.status as SessionStatus} size="md" showTooltip />
+              <StatusBadge
+                status={sessionInfo.status as SessionStatus}
+                size={isMobile ? 'sm' : 'md'}
+                showTooltip={!isMobile}
+              />
             )}
-            <div>
+            <div className={isMobile ? 'max-w-[120px]' : ''}>
               <div className="flex items-center gap-2">
-                <h1 className="font-mono text-base font-semibold text-white">
+                <h1
+                  className={cn(
+                    'font-mono font-semibold text-white',
+                    isMobile ? 'truncate text-sm' : 'text-base'
+                  )}
+                >
                   {isNewSession ? 'New Session' : displayName}
                 </h1>
-                {ralphConfig && (
+                {ralphConfig && !isMobile && (
                   <span className="flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-400">
                     <RefreshCw className="h-3 w-3" />
                     Ralph Loop
                   </span>
                 )}
               </div>
-              <p className="text-xs text-white/40">{project}</p>
+              {!isMobile && <p className="text-xs text-white/40">{project}</p>}
             </div>
           </div>
         </div>
@@ -105,27 +124,32 @@ export function SessionView({
         {/* Right: Connection status */}
         <div className="flex items-center gap-2">
           {isConnected ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="text-xs text-emerald-400">Connected</span>
+              {!isMobile && <span className="text-xs text-emerald-400">Connected</span>}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <WifiOff className="h-3 w-3 text-red-400" />
-              <span className="text-xs text-red-400">Disconnected</span>
+              {!isMobile && <span className="text-xs text-red-400">Disconnected</span>}
             </div>
           )}
         </div>
       </div>
 
       {/* Tab Bar */}
-      <EditorTerminalTabs activeTab={activeTab} onTabChange={setActiveTab} editorEnabled={true} />
+      <EditorTerminalTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        editorEnabled={true}
+        isMobile={isMobile}
+      />
 
-      {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Content - min-h-0 and w-full are critical for nested flex containers */}
+      <div className="min-h-0 w-full flex-1 overflow-hidden">
         {activeTab === 'terminal' ? (
           <Terminal
             key={`${project}-${sessionName}`}
@@ -137,6 +161,7 @@ export function SessionView({
             onConnectionChange={setIsConnected}
             onSessionCreated={handleSessionCreated}
             claudeStatus={sessionInfo?.status}
+            isMobile={isMobile}
           />
         ) : (
           <FileExplorer key={`files-${project}`} agentUrl={agentUrl} project={project} />

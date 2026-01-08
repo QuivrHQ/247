@@ -18,6 +18,8 @@ interface UseTerminalConnectionProps {
   ralphConfig?: RalphLoopConfig;
   onSessionCreated?: (name: string) => void;
   onCopySuccess: () => void;
+  /** Mobile mode - use smaller font and handle orientation changes */
+  isMobile?: boolean;
 }
 
 export function useTerminalConnection({
@@ -29,6 +31,7 @@ export function useTerminalConnection({
   ralphConfig,
   onSessionCreated,
   onCopySuccess,
+  isMobile = false,
 }: UseTerminalConnectionProps) {
   const [connected, setConnected] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -79,21 +82,24 @@ export function useTerminalConnection({
     let handleMouseUp: (() => void) | null = null;
     let handlePaste: ((e: ClipboardEvent) => void) | null = null;
     let termElement: HTMLElement | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let viewportQueries: MediaQueryList[] = [];
 
     const connectTimeout = setTimeout(() => {
       if (cancelled || !terminalRef.current) return;
 
-      // Initialize xterm.js
+      // Initialize xterm.js - smaller font for mobile
+      const fontSize = isMobile ? 11 : 14;
       term = new XTerm({
         cursorBlink: true,
-        fontSize: 14,
+        fontSize,
         fontFamily: '"JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
         fontWeight: '400',
         fontWeightBold: '600',
         letterSpacing: 0,
-        lineHeight: 1.2,
+        lineHeight: isMobile ? 1.15 : 1.2,
         scrollback: 15000,
-        scrollSensitivity: 1,
+        scrollSensitivity: isMobile ? 3 : 1, // More sensitive scrolling on mobile
         fastScrollSensitivity: 5,
         fastScrollModifier: 'alt',
         smoothScrollDuration: 100,
@@ -295,15 +301,79 @@ export function useTerminalConnection({
         }
       });
 
+      // Debounced resize handler for better mobile performance
+      // Uses requestAnimationFrame to ensure computed styles are updated before measuring
+      let resizeTimeout: NodeJS.Timeout | null = null;
       handleResize = () => {
-        fitAddon.fit();
-        if (currentWs.readyState === WebSocket.OPEN) {
-          currentWs.send(
-            JSON.stringify({ type: 'resize', cols: currentTerm.cols, rows: currentTerm.rows })
-          );
-        }
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(
+          () => {
+            // Wait for next paint cycle to ensure computed styles are current
+            // This is critical for Chrome DevTools mobile toggle which changes viewport
+            // but doesn't trigger standard resize events
+            requestAnimationFrame(() => {
+              fitAddon.fit();
+              if (currentWs.readyState === WebSocket.OPEN) {
+                currentWs.send(
+                  JSON.stringify({ type: 'resize', cols: currentTerm.cols, rows: currentTerm.rows })
+                );
+              }
+              // Fallback: fit again after layout fully settles
+              // Sometimes getComputedStyle returns stale values on first frame
+              setTimeout(() => {
+                fitAddon.fit();
+                if (currentWs.readyState === WebSocket.OPEN) {
+                  currentWs.send(
+                    JSON.stringify({
+                      type: 'resize',
+                      cols: currentTerm.cols,
+                      rows: currentTerm.rows,
+                    })
+                  );
+                }
+              }, 50);
+            });
+          },
+          isMobile ? 100 : 50
+        ); // Longer debounce on mobile for orientation changes
       };
       window.addEventListener('resize', handleResize);
+
+      // Handle orientation change on mobile devices
+      if (isMobile && 'orientation' in screen) {
+        screen.orientation.addEventListener('change', handleResize);
+      }
+
+      // Also handle visual viewport changes (for mobile keyboard)
+      if (isMobile && window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleResize);
+      }
+
+      // Use ResizeObserver to detect container size changes
+      resizeObserver = new ResizeObserver(() => {
+        handleResize?.();
+      });
+      resizeObserver.observe(terminalRef.current);
+
+      // Listen to viewport breakpoint changes via matchMedia
+      // This is the KEY fix for Chrome DevTools mobile toggle!
+      // DevTools emulation doesn't trigger window.resize but DOES trigger CSS media queries
+      viewportQueries = [
+        // Mobile device sizes (DevTools presets) - critical for DevTools toggle to work!
+        window.matchMedia('(max-width: 375px)'), // iPhone SE, mini
+        window.matchMedia('(max-width: 390px)'), // iPhone 12/13/14
+        window.matchMedia('(max-width: 414px)'), // iPhone Plus
+        window.matchMedia('(max-width: 428px)'), // iPhone Pro Max
+        window.matchMedia('(max-width: 480px)'), // Small landscape
+        // Tailwind breakpoints
+        window.matchMedia('(max-width: 640px)'), // sm
+        window.matchMedia('(max-width: 768px)'), // md
+        window.matchMedia('(max-width: 1024px)'), // lg
+        window.matchMedia('(max-width: 1280px)'), // xl
+        window.matchMedia('(max-width: 1536px)'), // 2xl
+      ];
+      const resizeHandler = handleResize; // Capture non-null reference
+      viewportQueries.forEach((mq) => mq.addEventListener('change', resizeHandler));
     }, 150);
 
     return () => {
@@ -319,9 +389,27 @@ export function useTerminalConnection({
       reconnectDelayRef.current = WS_RECONNECT_BASE_DELAY;
       isReconnectRef.current = false;
 
-      if (handleResize) window.removeEventListener('resize', handleResize);
+      if (handleResize) {
+        window.removeEventListener('resize', handleResize);
+        // Clean up mobile-specific listeners
+        if (isMobile && 'orientation' in screen) {
+          screen.orientation.removeEventListener('change', handleResize);
+        }
+        if (isMobile && window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleResize);
+        }
+      }
       if (handleMouseUp) window.removeEventListener('mouseup', handleMouseUp);
       if (handlePaste && termElement) termElement.removeEventListener('paste', handlePaste);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+      }
+      // Clean up matchMedia listeners
+      viewportQueries.forEach((mq) => {
+        if (handleResize) mq.removeEventListener('change', handleResize);
+      });
+      viewportQueries = [];
 
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         ws.close(1000, 'Component unmounting');
@@ -343,6 +431,57 @@ export function useTerminalConnection({
     // from deps - they are refs/callbacks that shouldn't cause reconnection
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentUrl, project, sessionName, environmentId, ralphConfig]);
+
+  // Separate effect to handle isMobile changes dynamically
+  // This updates font size without recreating the terminal (more efficient)
+  // Critical for Chrome DevTools mobile toggle which doesn't trigger full re-render
+  useEffect(() => {
+    const term = xtermRef.current;
+    const fitAddon = fitAddonRef.current;
+    if (!term || !fitAddon) return;
+
+    const newFontSize = isMobile ? 11 : 14;
+    const newLineHeight = isMobile ? 1.15 : 1.2;
+
+    // Only update if font size actually changed
+    if (term.options.fontSize !== newFontSize) {
+      term.options.fontSize = newFontSize;
+      term.options.lineHeight = newLineHeight;
+
+      // Force xterm to fully recalculate and redraw
+      // 1. Refresh all rows to apply new font
+      term.refresh(0, term.rows - 1);
+
+      // 2. Force terminal element to recalculate its size
+      // The xterm canvas can have stale dimensions after viewport change
+      const doFit = () => {
+        // Force the terminal element to re-layout
+        if (term.element) {
+          const parent = term.element.parentElement;
+          if (parent) {
+            // Get actual container dimensions
+            const { clientWidth, clientHeight } = parent;
+
+            // Force terminal element size
+            term.element.style.width = `${clientWidth}px`;
+            term.element.style.height = `${clientHeight}px`;
+          }
+        }
+
+        fitAddon.fit();
+        term.refresh(0, term.rows - 1);
+
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        }
+      };
+
+      // Multiple fit attempts to catch delayed layout changes
+      setTimeout(doFit, 0);
+      setTimeout(doFit, 100);
+      setTimeout(doFit, 250);
+    }
+  }, [isMobile]);
 
   return {
     connected,

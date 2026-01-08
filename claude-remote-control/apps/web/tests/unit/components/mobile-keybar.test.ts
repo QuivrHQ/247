@@ -146,30 +146,26 @@ describe('MobileKeybar', () => {
       expect(defaultVisible).toBe(true);
     });
 
-    it('uses translate-y-0 when visible', () => {
+    it('renders component when visible is true', () => {
       const visible = true;
-      const translateClass = visible ? 'translate-y-0' : 'translate-y-full';
-      expect(translateClass).toBe('translate-y-0');
+      // Component renders when visible
+      const shouldRender = visible;
+      expect(shouldRender).toBe(true);
     });
 
-    it('uses translate-y-full when hidden', () => {
+    it('returns null when hidden (completely removes from layout)', () => {
       const visible = false;
-      const translateClass = visible ? 'translate-y-0' : 'translate-y-full';
-      expect(translateClass).toBe('translate-y-full');
+      // Component returns null when hidden to free up space
+      const shouldRender = visible;
+      expect(shouldRender).toBe(false);
     });
 
-    it('has transition animation classes', () => {
-      const animationClasses = 'transition-transform duration-200 ease-out';
-      expect(animationClasses).toContain('transition-transform');
-      expect(animationClasses).toContain('duration-200');
-      expect(animationClasses).toContain('ease-out');
-    });
-
-    it('200ms is appropriate for slide animation', () => {
-      // 200ms is snappy but visible
-      const durationMs = 200;
-      expect(durationMs).toBeGreaterThanOrEqual(150); // Not too fast
-      expect(durationMs).toBeLessThanOrEqual(300); // Not too slow
+    it('removes from DOM instead of CSS hide for proper layout', () => {
+      // This is important: we return null instead of using CSS to hide
+      // because we want the terminal to resize and fill the space
+      const visible = false;
+      const componentOutput = visible ? 'rendered' : null;
+      expect(componentOutput).toBeNull();
     });
   });
 

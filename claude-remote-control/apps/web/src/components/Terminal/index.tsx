@@ -70,6 +70,7 @@ export function Terminal({
     startClaude,
     sendInput,
     scrollTerminal,
+    triggerResize,
   } = useTerminalConnection({
     terminalRef,
     agentUrl,
@@ -97,6 +98,16 @@ export function Terminal({
   useEffect(() => {
     onConnectionChange?.(connected);
   }, [connected, onConnectionChange]);
+
+  // Trigger terminal resize when keybar visibility changes (mobile only)
+  useEffect(() => {
+    if (!isMobile) return;
+    // Small delay to allow CSS transition to start
+    const timer = setTimeout(() => {
+      triggerResize();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [keybarVisible, isMobile, triggerResize]);
 
   return (
     <div className="relative flex w-full flex-1 flex-col overflow-hidden">

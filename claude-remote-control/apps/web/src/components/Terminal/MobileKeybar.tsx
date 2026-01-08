@@ -57,12 +57,16 @@ function KeyButton({ onClick, children, label, className }: KeyButtonProps) {
 }
 
 export function MobileKeybar({ onKeyPress, onScroll, visible = true }: MobileKeybarProps) {
+  // When hidden, completely remove from layout (h-0 + overflow-hidden)
+  // This allows the terminal to expand and fill the space
+  if (!visible) {
+    return null;
+  }
+
   return (
     <div
       className={cn(
-        'flex flex-col gap-1.5 border-t border-white/5 bg-[#0d0d14]/95 px-2 py-2 backdrop-blur-sm',
-        'transition-transform duration-200 ease-out',
-        visible ? 'translate-y-0' : 'translate-y-full'
+        'flex flex-col gap-1.5 border-t border-white/5 bg-[#0d0d14]/95 px-2 py-2 backdrop-blur-sm'
       )}
     >
       {/* Row 1: Scroll + Arrow Navigation */}

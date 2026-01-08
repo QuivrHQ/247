@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && pnpm run build --filter=@vibecompany/247-shared && cd apps/web && pnpm build",
+  "buildCommand": "cd ../.. && pnpm run build --filter=247-shared && cd apps/web && pnpm build",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install"

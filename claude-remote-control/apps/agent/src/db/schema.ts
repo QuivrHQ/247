@@ -1,4 +1,4 @@
-import type { SessionStatus, AttentionReason, EnvironmentProvider } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason, EnvironmentProvider } from '247-shared';
 
 // ============================================================================
 // Database Row Types

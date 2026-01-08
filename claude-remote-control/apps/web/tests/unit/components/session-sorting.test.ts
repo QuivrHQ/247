@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SessionInfo } from '@/lib/notifications';
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 // Simplified sorting logic - just createdAt (newest first)
 const sortSessions = (sessions: SessionInfo[]): SessionInfo[] => {
@@ -17,14 +17,18 @@ const filterSessions = (sessions: SessionInfo[], filter: FilterType): SessionInf
     if (filter === 'waiting')
       return s.status === 'needs_attention' && s.attentionReason !== 'task_complete';
     if (filter === 'done')
-      return s.status === 'idle' ||
-        (s.status === 'needs_attention' && s.attentionReason === 'task_complete');
+      return (
+        s.status === 'idle' ||
+        (s.status === 'needs_attention' && s.attentionReason === 'task_complete')
+      );
     return true;
   });
 };
 
 // Extract counting logic
-const countByStatus = (sessions: SessionInfo[]): { active: number; waiting: number; done: number } => {
+const countByStatus = (
+  sessions: SessionInfo[]
+): { active: number; waiting: number; done: number } => {
   return sessions.reduce(
     (acc, s) => {
       if (s.status === 'working' || s.status === 'init') acc.active++;
@@ -206,10 +210,7 @@ describe('Session Filtering', () => {
 
 describe('Session Counting', () => {
   it('counts working sessions as active', () => {
-    const sessions = [
-      createSession('w1', 'working', 1000),
-      createSession('w2', 'working', 2000),
-    ];
+    const sessions = [createSession('w1', 'working', 1000), createSession('w2', 'working', 2000)];
     const counts = countByStatus(sessions);
     expect(counts.active).toBe(2);
     expect(counts.waiting).toBe(0);
@@ -217,10 +218,7 @@ describe('Session Counting', () => {
   });
 
   it('counts init sessions as active', () => {
-    const sessions = [
-      createSession('i1', 'init', 1000),
-      createSession('i2', 'init', 2000),
-    ];
+    const sessions = [createSession('i1', 'init', 1000), createSession('i2', 'init', 2000)];
     const counts = countByStatus(sessions);
     expect(counts.active).toBe(2);
     expect(counts.waiting).toBe(0);
@@ -253,9 +251,7 @@ describe('Session Counting', () => {
   });
 
   it('counts needs_attention with task_complete as done', () => {
-    const sessions = [
-      createSession('s1', 'needs_attention', 1000, 'task_complete'),
-    ];
+    const sessions = [createSession('s1', 'needs_attention', 1000, 'task_complete')];
     const counts = countByStatus(sessions);
     expect(counts.active).toBe(0);
     expect(counts.waiting).toBe(0);
@@ -263,9 +259,7 @@ describe('Session Counting', () => {
   });
 
   it('counts idle as done', () => {
-    const sessions = [
-      createSession('s1', 'idle', 1000),
-    ];
+    const sessions = [createSession('s1', 'idle', 1000)];
     const counts = countByStatus(sessions);
     expect(counts.done).toBe(1);
   });

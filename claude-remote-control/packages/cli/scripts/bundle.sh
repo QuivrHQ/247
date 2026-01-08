@@ -15,11 +15,11 @@ echo "Monorepo root: $MONOREPO_ROOT"
 # Build shared package first (agent depends on it)
 echo "Building shared package..."
 cd "$MONOREPO_ROOT"
-pnpm --filter @vibecompany/247-shared build
+pnpm --filter 247-shared build
 
 # Build agent
 echo "Building agent..."
-pnpm --filter @vibecompany/247-agent build
+pnpm --filter 247-agent build
 
 # Copy hooks package
 echo "Copying hooks..."
@@ -49,16 +49,16 @@ if [ -d "../../apps/agent/dist" ]; then
   cp -r ../../apps/agent/dist/* agent/dist/
 else
   echo "Warning: Agent dist not found at ../../apps/agent/dist"
-  echo "Make sure to build the agent first: pnpm --filter @vibecompany/247-agent build"
+  echo "Make sure to build the agent first: pnpm --filter 247-agent build"
 fi
 
 # Copy shared package (agent depends on it at runtime)
 echo "Copying shared package..."
-mkdir -p agent/node_modules/@vibecompany/247-shared
+mkdir -p agent/node_modules/247-shared
 
 if [ -d "../../packages/shared/dist" ]; then
-  cp -r ../../packages/shared/dist agent/node_modules/@vibecompany/247-shared/
-  cp ../../packages/shared/package.json agent/node_modules/@vibecompany/247-shared/
+  cp -r ../../packages/shared/dist agent/node_modules/247-shared/
+  cp ../../packages/shared/package.json agent/node_modules/247-shared/
 else
   echo "Warning: Shared dist not found at ../../packages/shared/dist"
 fi

@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { existsSync, readFileSync } from 'fs';
-import type { AgentConfig } from '@vibecompany/247-shared';
+import type { AgentConfig } from '247-shared';
 
 // Type guard for AgentConfig validation
 function isValidAgentConfig(obj: unknown): obj is AgentConfig {

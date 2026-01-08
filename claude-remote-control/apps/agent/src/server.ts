@@ -13,7 +13,7 @@ import { initDatabase, closeDatabase, migrateEnvironmentsFromJson } from './db/i
 import { ensureDefaultEnvironment } from './db/environments.js';
 import * as sessionsDb from './db/sessions.js';
 import { config } from './config.js';
-import type { AgentConfig } from '@vibecompany/247-shared';
+import type { AgentConfig } from '247-shared';
 
 // Routes
 import {

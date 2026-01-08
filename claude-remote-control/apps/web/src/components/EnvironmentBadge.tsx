@@ -1,8 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { EnvironmentProvider, EnvironmentIcon } from '@vibecompany/247-shared';
-import { DEFAULT_PROVIDER_ICONS } from '@vibecompany/247-shared';
+import type { EnvironmentProvider, EnvironmentIcon } from '247-shared';
+import { DEFAULT_PROVIDER_ICONS } from '247-shared';
 import { getIconComponent } from './IconPicker';
 
 const providerColors: Record<EnvironmentProvider, { color: string; bg: string }> = {
@@ -45,12 +45,12 @@ export function EnvironmentBadge({
         className={cn(
           'inline-flex items-center justify-center rounded-md border',
           colors.bg,
-          size === 'sm' ? 'w-5 h-5' : 'w-6 h-6',
+          size === 'sm' ? 'h-5 w-5' : 'h-6 w-6',
           className
         )}
         title={name || provider}
       >
-        <Icon className={cn(colors.color, size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5')} />
+        <Icon className={cn(colors.color, size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
       </div>
     );
   }
@@ -64,7 +64,7 @@ export function EnvironmentBadge({
         className
       )}
     >
-      <Icon className={cn(colors.color, size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5')} />
+      <Icon className={cn(colors.color, size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
       <span className={cn('font-medium', colors.color)}>{name || provider}</span>
     </div>
   );

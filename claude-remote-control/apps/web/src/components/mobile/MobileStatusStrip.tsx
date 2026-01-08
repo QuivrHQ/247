@@ -8,7 +8,7 @@ import { cn, buildApiUrl } from '@/lib/utils';
 import { StatusRing } from '@/components/ui/StatusRing';
 import { SessionMiniCard } from './SessionMiniCard';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
-import type { SessionStatus } from '@vibecompany/247-shared';
+import type { SessionStatus } from '247-shared';
 
 export type MobileFilterType = 'all' | 'active' | 'waiting' | 'done';
 

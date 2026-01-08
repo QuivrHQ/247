@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express';
-import type { SessionStatus, AttentionReason, WSSessionInfo } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason, WSSessionInfo } from '247-shared';
 import { tmuxSessionStatus, broadcastSessionRemoved, broadcastSessionArchived } from '../status.js';
 import * as sessionsDb from '../db/sessions.js';
 import {

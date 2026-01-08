@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StatusRing, statusStyles } from '@/components/ui/StatusRing';
-import type { SessionStatus } from '@vibecompany/247-shared';
+import type { SessionStatus } from '247-shared';
 
 export interface ControlPanelHeaderProps {
   activeSessions: number;

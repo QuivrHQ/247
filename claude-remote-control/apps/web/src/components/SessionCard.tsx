@@ -16,7 +16,7 @@ import {
   Archive,
 } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
+import { type SessionStatus, type AttentionReason } from '247-shared';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import { EnvironmentBadge } from './EnvironmentBadge';
 import { cn } from '@/lib/utils';

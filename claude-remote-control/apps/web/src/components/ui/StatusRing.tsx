@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { SessionStatus } from '@vibecompany/247-shared';
+import type { SessionStatus } from '247-shared';
 
 export interface StatusRingProps {
   status: SessionStatus;

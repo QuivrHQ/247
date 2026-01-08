@@ -15,7 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
-import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
+import { type SessionStatus, type AttentionReason } from '247-shared';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 
@@ -110,14 +110,14 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
   const config = statusConfig[status] || statusConfig.idle;
 
   // Use attention-specific icon if available
-  const Icon = status === 'needs_attention' && attentionReason
-    ? attentionIcons[attentionReason]
-    : config.icon;
+  const Icon =
+    status === 'needs_attention' && attentionReason ? attentionIcons[attentionReason] : config.icon;
 
   // Use attention-specific label if available
-  const label = status === 'needs_attention' && attentionReason
-    ? attentionLabels[attentionReason]
-    : config.label;
+  const label =
+    status === 'needs_attention' && attentionReason
+      ? attentionLabels[attentionReason]
+      : config.label;
 
   // Extract readable session name (part after --)
   const displayName = session.name.split('--')[1] || session.name;
@@ -130,7 +130,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
     <button
       onClick={onClick}
       className={cn(
-        'relative w-full p-4 rounded-xl transition-all group text-left',
+        'group relative w-full rounded-xl p-4 text-left transition-all',
         'border bg-[#12121a]/50 hover:bg-[#12121a]',
         needsAttention
           ? cn('border-orange-500/40', 'shadow-lg shadow-orange-500/10')
@@ -147,24 +147,22 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
+              'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl',
               config.bgColor,
               'border',
               config.borderColor,
               needsAttention && 'ring-2 ring-orange-500/40 ring-offset-2 ring-offset-[#0a0a10]'
             )}
           >
-            <Icon
-              className={cn('w-6 h-6', config.color, status === 'working' && 'animate-spin')}
-            />
+            <Icon className={cn('h-6 w-6', config.color, status === 'working' && 'animate-spin')} />
           </motion.div>
         </AnimatePresence>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           {/* Session name + status */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-white truncate">{displayName}</span>
+          <div className="mb-1 flex items-center gap-2">
+            <span className="truncate font-semibold text-white">{displayName}</span>
             <AnimatePresence mode="wait">
               <motion.span
                 key={`${status}-${attentionReason}`}
@@ -173,7 +171,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
                 exit={{ y: 5, opacity: 0 }}
                 transition={{ duration: 0.15 }}
                 className={cn(
-                  'text-xs px-2 py-0.5 rounded-full font-medium',
+                  'rounded-full px-2 py-0.5 text-xs font-medium',
                   config.bgColor,
                   config.color,
                   'border',
@@ -184,25 +182,25 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
               </motion.span>
             </AnimatePresence>
             {statusTime && (
-              <span className="text-xs text-white/40 flex items-center gap-1">
-                <Activity className="w-3 h-3" />
+              <span className="flex items-center gap-1 text-xs text-white/40">
+                <Activity className="h-3 w-3" />
                 {statusTime}
               </span>
             )}
           </div>
 
           {/* Project */}
-          <div className="text-sm text-white/60 mb-2">{session.project}</div>
+          <div className="mb-2 text-sm text-white/60">{session.project}</div>
 
           {/* Machine + Created */}
           <div className="flex items-center gap-3 text-xs text-white/40">
             <div className="flex items-center gap-1.5">
-              <Monitor className="w-3.5 h-3.5" />
+              <Monitor className="h-3.5 w-3.5" />
               <span>{session.machineName}</span>
             </div>
             <span className="text-white/20">|</span>
             <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
+              <Clock className="h-3 w-3" />
               <span>{formatRelativeTime(session.createdAt)}</span>
             </div>
             {session.statusSource === 'hook' && (
@@ -210,16 +208,16 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
                 className="flex items-center gap-0.5 text-emerald-400/60"
                 title="Real-time via WebSocket"
               >
-                <Zap className="w-3 h-3" />
+                <Zap className="h-3 w-3" />
               </span>
             )}
           </div>
         </div>
 
         {/* Arrow indicator on hover */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity self-center">
+        <div className="self-center opacity-0 transition-opacity group-hover:opacity-100">
           <svg
-            className="w-5 h-5 text-white/30"
+            className="h-5 w-5 text-white/30"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -231,7 +229,7 @@ export function GlobalSessionCard({ session, onClick }: GlobalSessionCardProps) 
 
       {/* Attention pulse overlay */}
       {needsAttention && (
-        <div className="absolute inset-0 rounded-xl border border-orange-500/40 animate-pulse pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 animate-pulse rounded-xl border border-orange-500/40" />
       )}
     </button>
   );

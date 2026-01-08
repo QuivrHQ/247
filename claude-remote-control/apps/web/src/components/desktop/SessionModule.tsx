@@ -19,7 +19,7 @@ import { StatusRing, statusStyles } from '@/components/ui/StatusRing';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EnvironmentBadge } from '@/components/EnvironmentBadge';
 import type { SessionInfo } from '@/lib/notifications';
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 export interface SessionModuleProps {
   session: SessionInfo;

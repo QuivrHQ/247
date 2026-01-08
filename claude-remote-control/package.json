@@ -25,8 +25,8 @@
     "test:duplication": "vitest run tests/duplication",
     "duplication": "jscpd",
     "duplication:check": "jscpd --exitCode 1",
-    "dev:web": "pnpm --filter @vibecompany/247-web dev",
-    "dev:agent": "pnpm --filter @vibecompany/247-agent dev",
+    "dev:web": "pnpm --filter 247-web dev",
+    "dev:agent": "pnpm --filter 247-agent dev",
     "prepare": "echo 'Husky hooks configured at repo root'"
   },
   "devDependencies": {

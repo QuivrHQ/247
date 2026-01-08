@@ -9,8 +9,8 @@ import type {
   Environment,
   EnvironmentMetadata,
   EnvironmentIcon,
-} from '@vibecompany/247-shared';
-import { ENVIRONMENT_PRESETS } from '@vibecompany/247-shared';
+} from '247-shared';
+import { ENVIRONMENT_PRESETS } from '247-shared';
 import { IconPicker } from './IconPicker';
 
 interface EnvVariable {

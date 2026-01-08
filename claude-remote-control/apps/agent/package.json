@@ -1,5 +1,5 @@
 {
-  "name": "@vibecompany/247-agent",
+  "name": "247-agent",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@vibecompany/247-shared": "workspace:*",
+    "247-shared": "workspace:*",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",

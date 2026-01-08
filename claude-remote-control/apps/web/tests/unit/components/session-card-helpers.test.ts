@@ -4,7 +4,7 @@
  * Tests for helper functions and configuration in the SessionCard component.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 // Re-implement the formatStatusTime logic from SessionCard for testing
 function formatStatusTime(timestamp: number | undefined): string {

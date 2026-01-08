@@ -1,14 +1,16 @@
 import { getDatabase } from './index.js';
 import { recordStatusChange } from './history.js';
 import type { DbSession, UpsertSessionInput } from './schema.js';
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 /**
  * Get a session by name
  */
 export function getSession(name: string): DbSession | null {
   const db = getDatabase();
-  const row = db.prepare('SELECT * FROM sessions WHERE name = ?').get(name) as DbSession | undefined;
+  const row = db.prepare('SELECT * FROM sessions WHERE name = ?').get(name) as
+    | DbSession
+    | undefined;
   return row ?? null;
 }
 

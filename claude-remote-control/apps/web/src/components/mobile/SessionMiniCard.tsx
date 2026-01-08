@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 import { StatusRing } from '@/components/ui/StatusRing';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 export interface SessionMiniCardProps {
   session: {

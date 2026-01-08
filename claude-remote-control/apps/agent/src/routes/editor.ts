@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express';
-import type { AgentConfig } from '@vibecompany/247-shared';
+import type { AgentConfig } from '247-shared';
 import { config } from '../config.js';
 import {
   getOrStartEditor,

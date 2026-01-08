@@ -2,13 +2,8 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import type { SessionStatus, AttentionReason } from '@vibecompany/247-shared';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 // Re-export types for convenience
 export type { SessionStatus, AttentionReason };
@@ -81,14 +76,16 @@ export function StatusBadge({
   const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm';
 
   // Use attention-specific label if available
-  const label = status === 'needs_attention' && attentionReason
-    ? attentionLabels[attentionReason]
-    : config.label;
+  const label =
+    status === 'needs_attention' && attentionReason
+      ? attentionLabels[attentionReason]
+      : config.label;
 
   // Use attention-specific description if available
-  const description = status === 'needs_attention' && attentionReason
-    ? attentionDescriptions[attentionReason]
-    : config.description;
+  const description =
+    status === 'needs_attention' && attentionReason
+      ? attentionDescriptions[attentionReason]
+      : config.description;
 
   const badge = (
     <span
@@ -104,10 +101,7 @@ export function StatusBadge({
       {...props}
     >
       {showDot && (
-        <span
-          className={cn('w-2 h-2 rounded-full', config.dotClassName)}
-          aria-hidden="true"
-        />
+        <span className={cn('h-2 w-2 rounded-full', config.dotClassName)} aria-hidden="true" />
       )}
       {showLabel && label}
     </span>
@@ -121,7 +115,7 @@ export function StatusBadge({
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <p className="font-medium">{label}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-xs">{description}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -134,7 +128,13 @@ export interface CountBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   showTooltip?: boolean;
 }
 
-export function CountBadge({ status, count, showTooltip = true, className, ...props }: CountBadgeProps) {
+export function CountBadge({
+  status,
+  count,
+  showTooltip = true,
+  className,
+  ...props
+}: CountBadgeProps) {
   if (count === 0) return null;
 
   const config = statusConfig[status];
@@ -150,7 +150,7 @@ export function CountBadge({ status, count, showTooltip = true, className, ...pr
       role="status"
       aria-label={`${count} ${labels[status]}`}
       className={cn(
-        'px-2 py-0.5 rounded text-xs font-medium transition-colors',
+        'rounded px-2 py-0.5 text-xs font-medium transition-colors',
         'hover:brightness-110',
         config.className,
         className
@@ -168,8 +168,10 @@ export function CountBadge({ status, count, showTooltip = true, className, ...pr
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
-          <p className="font-medium">{count} session{count > 1 ? 's' : ''} {labels[status]}</p>
-          <p className="text-xs text-muted-foreground">{config.description}</p>
+          <p className="font-medium">
+            {count} session{count > 1 ? 's' : ''} {labels[status]}
+          </p>
+          <p className="text-muted-foreground text-xs">{config.description}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

@@ -9,7 +9,7 @@ import { installHooks } from '../hooks/installer.js';
 
 const execAsync = promisify(exec);
 
-const PACKAGE_NAME = '@vibecompany/247';
+const PACKAGE_NAME = '247-cli';
 
 export const updateCommand = new Command('update')
   .description('Update 247 to the latest version')
@@ -86,7 +86,7 @@ export const updateCommand = new Command('update')
         updateSpinner.succeed('Package updated');
       } catch (err) {
         updateSpinner.fail(`Failed to update: ${(err as Error).message}`);
-        console.log(chalk.dim('\nTry running manually: npm install -g @vibecompany/247@latest\n'));
+        console.log(chalk.dim('\nTry running manually: npm install -g 247-cli@latest\n'));
         process.exit(1);
       }
 

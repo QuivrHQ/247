@@ -1,6 +1,6 @@
 import { spawn, ChildProcess, execSync } from 'child_process';
 import { createConnection } from 'net';
-import type { EditorConfig, EditorStatus } from '@vibecompany/247-shared';
+import type { EditorConfig, EditorStatus } from '247-shared';
 
 interface EditorInstance {
   project: string;
@@ -27,7 +27,10 @@ let editorConfig: EditorConfig = DEFAULT_CONFIG;
 let projectsBasePath = '~/Dev';
 
 // Initialize editor manager with config
-export async function initEditor(config: EditorConfig | undefined, basePath: string): Promise<void> {
+export async function initEditor(
+  config: EditorConfig | undefined,
+  basePath: string
+): Promise<void> {
   editorConfig = config || DEFAULT_CONFIG;
   projectsBasePath = basePath;
 
@@ -38,7 +41,11 @@ export async function initEditor(config: EditorConfig | undefined, basePath: str
 
     // Start idle cleanup interval (check every 5 minutes)
     setInterval(cleanupIdleEditors, 5 * 60 * 1000);
-    console.log('[Editor] Manager initialized, idle timeout:', editorConfig.idleTimeout / 1000, 's');
+    console.log(
+      '[Editor] Manager initialized, idle timeout:',
+      editorConfig.idleTimeout / 1000,
+      's'
+    );
   }
 }
 
@@ -85,7 +92,7 @@ async function killOrphanCodeServers(): Promise<void> {
         }
       }
       // Wait a bit for processes to terminate
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   } catch {
     // lsof may not be available or no processes found
@@ -140,18 +147,24 @@ export async function getOrStartEditor(project: string): Promise<EditorInstance>
     PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH}`,
   };
 
-  const codeServer = spawn('code-server', [
-    '--bind-addr', `127.0.0.1:${port}`,
-    '--auth', 'none',
-    '--disable-telemetry',
-    '--disable-update-check',
-    '--disable-proxy',
-    projectPath,
-  ], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    detached: false,
-    env,
-  });
+  const codeServer = spawn(
+    'code-server',
+    [
+      '--bind-addr',
+      `127.0.0.1:${port}`,
+      '--auth',
+      'none',
+      '--disable-telemetry',
+      '--disable-update-check',
+      '--disable-proxy',
+      projectPath,
+    ],
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: false,
+      env,
+    }
+  );
 
   const instance: EditorInstance = {
     project,
@@ -191,7 +204,7 @@ export async function getOrStartEditor(project: string): Promise<EditorInstance>
   editorInstances.set(project, instance);
 
   // Wait for code-server to be ready (simple delay for now)
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   return instance;
 }
@@ -252,7 +265,9 @@ function cleanupIdleEditors(): void {
   for (const [project, instance] of editorInstances) {
     const idleTime = now - instance.lastActivity;
     if (idleTime > editorConfig.idleTimeout) {
-      console.log(`[Editor] Stopping idle code-server for ${project} (idle ${Math.round(idleTime / 1000)}s)`);
+      console.log(
+        `[Editor] Stopping idle code-server for ${project} (idle ${Math.round(idleTime / 1000)}s)`
+      );
       stopEditor(project);
     }
   }

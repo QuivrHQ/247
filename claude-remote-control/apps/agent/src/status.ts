@@ -10,7 +10,7 @@ import type {
   AttentionReason,
   WSSessionInfo,
   WSStatusMessageFromAgent,
-} from '@vibecompany/247-shared';
+} from '247-shared';
 import { RETENTION_CONFIG } from './db/index.js';
 import * as sessionsDb from './db/sessions.js';
 import * as historyDb from './db/history.js';

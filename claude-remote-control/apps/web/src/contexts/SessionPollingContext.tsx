@@ -15,7 +15,7 @@ import {
   showSessionNotification,
 } from '@/lib/notifications';
 import { buildWebSocketUrl, buildApiUrl } from '@/lib/utils';
-import type { WSStatusMessageFromAgent } from '@vibecompany/247-shared';
+import type { WSStatusMessageFromAgent } from '247-shared';
 
 export interface Machine {
   id: string;

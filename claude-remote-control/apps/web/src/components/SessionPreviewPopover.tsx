@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, Zap, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { type SessionInfo } from '@/lib/notifications';
-import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
+import { type SessionStatus, type AttentionReason } from '247-shared';
 import { cn, buildApiUrl } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 

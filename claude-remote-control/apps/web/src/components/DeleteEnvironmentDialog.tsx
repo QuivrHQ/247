@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { EnvironmentMetadata } from '@vibecompany/247-shared';
+import type { EnvironmentMetadata } from '247-shared';
 
 interface DeleteEnvironmentDialogProps {
   environment: EnvironmentMetadata | null;
@@ -44,16 +44,16 @@ export function DeleteEnvironmentDialog({
             transition={{ duration: 0.2, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'relative w-full max-w-md mx-4',
-              'bg-[#0d0d14] border border-white/10 rounded-2xl',
+              'relative mx-4 w-full max-w-md',
+              'rounded-2xl border border-white/10 bg-[#0d0d14]',
               'shadow-2xl shadow-black/50'
             )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+            <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-white">Delete Environment</h2>
@@ -63,9 +63,9 @@ export function DeleteEnvironmentDialog({
               <button
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
-                className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors disabled:opacity-50"
+                className="rounded-lg p-2 text-white/40 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-50"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
@@ -76,7 +76,7 @@ export function DeleteEnvironmentDialog({
                 <span className="font-medium text-white">{environment.name}</span>?
               </p>
               {environment.isDefault && (
-                <p className="mt-3 text-sm text-orange-400/80 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2">
+                <p className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/10 px-3 py-2 text-sm text-orange-400/80">
                   This is your default environment. Deleting it will remove the default selection.
                 </p>
               )}
@@ -87,11 +87,11 @@ export function DeleteEnvironmentDialog({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-white/5 flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-3 border-t border-white/5 px-6 py-4">
               <button
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
-                className="px-4 py-2.5 rounded-xl font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all disabled:opacity-50"
+                className="rounded-xl px-4 py-2.5 font-medium text-white/60 transition-all hover:bg-white/5 hover:text-white disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -99,14 +99,14 @@ export function DeleteEnvironmentDialog({
                 onClick={onConfirm}
                 disabled={loading}
                 className={cn(
-                  'flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all',
-                  'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                  'flex items-center gap-2 rounded-xl px-5 py-2.5 font-medium transition-all',
+                  'border border-red-500/30 bg-red-500/20 text-red-400 hover:bg-red-500/30',
+                  'disabled:cursor-not-allowed disabled:opacity-50'
                 )}
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Deleting...
                   </>
                 ) : (

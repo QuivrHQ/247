@@ -53,10 +53,7 @@ export const doctorCommand = new Command('doctor')
       status:
         nativeCheck.status === 'ok' ? 'pass' : nativeCheck.status === 'warn' ? 'warn' : 'fail',
       message: nativeCheck.message,
-      hint:
-        nativeCheck.status === 'error'
-          ? 'Try reinstalling: npm install -g @vibecompany/247'
-          : undefined,
+      hint: nativeCheck.status === 'error' ? 'Try reinstalling: npm install -g 247-cli' : undefined,
     });
 
     // 4. Check configuration

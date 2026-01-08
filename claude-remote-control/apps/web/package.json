@@ -1,5 +1,5 @@
 {
-  "name": "@vibecompany/247-web",
+  "name": "247-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -19,7 +19,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@serwist/next": "^9.5.0",
-    "@vibecompany/247-shared": "workspace:*",
+    "247-shared": "workspace:*",
     "@xterm/addon-canvas": "^0.7.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.16.0",

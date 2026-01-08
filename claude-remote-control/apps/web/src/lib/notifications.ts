@@ -4,10 +4,10 @@ import type {
   EnvironmentProvider,
   EnvironmentIcon,
   StatusSource,
-} from '@vibecompany/247-shared';
+} from '247-shared';
 
 // Local extension of WSSessionInfo for web app use
-// Mirrors the structure from @vibecompany/247-shared but with optional statusSource
+// Mirrors the structure from 247-shared but with optional statusSource
 export interface SessionInfo {
   name: string;
   project: string;

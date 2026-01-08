@@ -8,8 +8,8 @@ import type {
   EnvironmentIcon,
   CreateEnvironmentRequest,
   UpdateEnvironmentRequest,
-} from '@vibecompany/247-shared';
-import { ENVIRONMENT_PRESETS } from '@vibecompany/247-shared';
+} from '247-shared';
+import { ENVIRONMENT_PRESETS } from '247-shared';
 
 // ============================================================================
 // Conversion Functions

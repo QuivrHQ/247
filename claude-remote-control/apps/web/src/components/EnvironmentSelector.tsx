@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Zap, Globe, Check, Star, Settings } from 'lucide-react';
 import { cn, buildApiUrl } from '@/lib/utils';
-import type { EnvironmentMetadata, EnvironmentProvider } from '@vibecompany/247-shared';
+import type { EnvironmentMetadata, EnvironmentProvider } from '247-shared';
 
 const providerConfig: Record<
   EnvironmentProvider,

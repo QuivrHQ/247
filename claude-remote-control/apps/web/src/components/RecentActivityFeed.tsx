@@ -14,7 +14,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
-import { type SessionStatus, type AttentionReason } from '@vibecompany/247-shared';
+import { type SessionStatus, type AttentionReason } from '247-shared';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 

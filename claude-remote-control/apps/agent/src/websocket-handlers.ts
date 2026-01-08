@@ -26,7 +26,7 @@ import type {
   AttentionReason,
   WSSessionInfo,
   WSStatusMessageFromAgent,
-} from '@vibecompany/247-shared';
+} from '247-shared';
 
 /**
  * Handle terminal WebSocket connections

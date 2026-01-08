@@ -8,8 +8,8 @@ import type {
   EnvironmentProvider,
   CreateEnvironmentRequest,
   UpdateEnvironmentRequest,
-} from '@vibecompany/247-shared';
-import { ENVIRONMENT_PRESETS } from '@vibecompany/247-shared';
+} from '247-shared';
+import { ENVIRONMENT_PRESETS } from '247-shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,14 +31,18 @@ export function loadEnvironments(): void {
     try {
       const data = readFileSync(ENVIRONMENTS_FILE, 'utf-8');
       environments = JSON.parse(data);
-      console.log(`[Environments] Loaded ${environments.length} environments from ${ENVIRONMENTS_FILE}`);
+      console.log(
+        `[Environments] Loaded ${environments.length} environments from ${ENVIRONMENTS_FILE}`
+      );
     } catch (err) {
       console.error('[Environments] Failed to load:', err);
       environments = [];
     }
   } else {
     // Initialize with default Anthropic environment
-    console.log('[Environments] No environments.json found, creating default Anthropic environment');
+    console.log(
+      '[Environments] No environments.json found, creating default Anthropic environment'
+    );
     const now = Date.now();
     environments = [
       {

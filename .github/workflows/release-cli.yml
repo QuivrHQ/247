@@ -47,7 +47,7 @@ jobs:
 
       - name: Build CLI
         working-directory: claude-remote-control
-        run: pnpm --filter @vibecompany/247-cli build
+        run: pnpm --filter 247-cli build
 
       - name: Bundle CLI (copy hooks and agent)
         working-directory: claude-remote-control/packages/cli

@@ -18,7 +18,7 @@ import type {
   EnvironmentIcon,
   SessionStatus,
   AttentionReason,
-} from '@vibecompany/247-shared';
+} from '247-shared';
 
 // Mock config
 const mockConfig = {

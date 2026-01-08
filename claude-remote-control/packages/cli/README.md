@@ -7,7 +7,7 @@ A CLI tool by [The Vibe Company](https://247.thevibecompany.co) that lets you ru
 ## Installation
 
 ```bash
-npm install -g @vibecompany/247-cli
+npm install -g 247-cli
 ```
 
 ### Prerequisites
@@ -32,26 +32,27 @@ npm install -g @vibecompany/247-cli
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `247 init` | Interactive configuration wizard |
-| `247 start` | Start the agent (daemon mode) |
-| `247 start --foreground` | Start in foreground |
-| `247 stop` | Stop the agent |
-| `247 status` | Show agent status |
-| `247 logs [-f]` | View agent logs |
-| `247 service install` | Install system service |
-| `247 service uninstall` | Remove system service |
-| `247 service start/stop/restart` | Control service |
-| `247 hooks install` | Install Claude Code hooks |
-| `247 update` | Update to latest version |
-| `247 doctor` | Diagnose issues |
+| Command                          | Description                      |
+| -------------------------------- | -------------------------------- |
+| `247 init`                       | Interactive configuration wizard |
+| `247 start`                      | Start the agent (daemon mode)    |
+| `247 start --foreground`         | Start in foreground              |
+| `247 stop`                       | Stop the agent                   |
+| `247 status`                     | Show agent status                |
+| `247 logs [-f]`                  | View agent logs                  |
+| `247 service install`            | Install system service           |
+| `247 service uninstall`          | Remove system service            |
+| `247 service start/stop/restart` | Control service                  |
+| `247 hooks install`              | Install Claude Code hooks        |
+| `247 update`                     | Update to latest version         |
+| `247 doctor`                     | Diagnose issues                  |
 
 ## System Service
 
 The agent can run as a system service that starts automatically on boot:
 
 **macOS (launchd):**
+
 ```bash
 247 service install --start
 # Config: ~/Library/LaunchAgents/co.thevibecompany.247.plist
@@ -59,6 +60,7 @@ The agent can run as a system service that starts automatically on boot:
 ```
 
 **Linux (systemd):**
+
 ```bash
 247 service install --start
 # Config: ~/.config/systemd/user/247-agent.service

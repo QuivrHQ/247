@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-247 (Quivr) - A system for web terminal access to Claude Code from anywhere. Consists of a Next.js dashboard (Vercel), local Node.js agents (one per Mac) with SQLite for local persistence, and Cloudflare Tunnels for secure exposure.
+247 (Quivr) - A system for web terminal access to Claude Code from anywhere. Consists of a Next.js dashboard (Vercel), local Node.js agents (one per Mac) with SQLite for local persistence, and Cloudflare Tunnels for secure exposure..
 
 **Domain:** 247.quivr.com
 

@@ -20,10 +20,10 @@ export function getAgentVersion(): string {
 
   // Paths to try in order:
   // 1. Dev mode: apps/agent/package.json (src -> apps/agent)
-  // 2. Prod mode: CLI's package.json (dist -> agent -> cli)
+  // 2. Prod mode: CLI's package.json (agent/dist -> agent -> cli)
   const paths = [
     join(__dirname, '..', 'package.json'), // dev: src/version.ts -> apps/agent/
-    join(__dirname, '..', '..', '..', 'package.json'), // prod: dist/version.js -> agent/dist -> agent -> cli/
+    join(__dirname, '..', '..', 'package.json'), // prod: agent/dist/version.js -> agent -> cli/
   ];
 
   for (const p of paths) {

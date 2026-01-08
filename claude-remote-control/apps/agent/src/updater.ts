@@ -88,6 +88,9 @@ export function triggerUpdate(targetVersion: string): void {
 # 247 Auto-Update Script
 # Target version: ${targetVersion}
 
+# Change to /tmp to avoid blocking the agent directory during npm install
+cd /tmp
+
 # Wait for agent to fully exit
 sleep 2
 
@@ -96,6 +99,13 @@ npm install -g ${PACKAGE_NAME}@${targetVersion}
 
 if [ $? -ne 0 ]; then
   echo "[247] npm install failed, attempting restart anyway..."
+fi
+
+# Fix executable permissions (npm doesn't always preserve them)
+CLI_BIN="$(npm root -g)/${PACKAGE_NAME}/dist/index.js"
+if [ -f "$CLI_BIN" ]; then
+  chmod +x "$CLI_BIN"
+  echo "[247] Fixed executable permissions"
 fi
 
 echo "[247] Updating hooks..."

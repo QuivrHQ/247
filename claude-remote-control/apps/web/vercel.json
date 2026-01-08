@@ -2,5 +2,8 @@
   "buildCommand": "cd ../.. && pnpm run build --filter=247-shared && cd apps/web && pnpm build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "cd ../.. && pnpm install"
+  "installCommand": "cd ../.. && pnpm install",
+  "git": {
+    "deploymentEnabled": false
+  }
 }

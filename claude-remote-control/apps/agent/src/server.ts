@@ -24,6 +24,7 @@ import {
   createNotificationRoutes,
   createEditorRoutes,
   createFilesRoutes,
+  createOrchestratorRoutes,
   isProjectAllowed,
   updateEditorActivity,
   getOrStartEditor,
@@ -90,6 +91,7 @@ export async function createServer() {
   app.use('/api/notification', createNotificationRoutes());
   app.use('/api/editor', createEditorRoutes());
   app.use('/api/files', createFilesRoutes());
+  app.use('/api/orchestrator', createOrchestratorRoutes());
 
   // Editor proxy middleware
   app.use('/editor/:project', async (req, res) => {

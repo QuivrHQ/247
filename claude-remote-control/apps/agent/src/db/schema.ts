@@ -1,8 +1,55 @@
 import type { SessionStatus, AttentionReason, EnvironmentProvider } from '247-shared';
 
 // ============================================================================
+// Orchestrator Types
+// ============================================================================
+
+export type OrchestrationStatus =
+  | 'planning'
+  | 'clarifying'
+  | 'executing'
+  | 'iterating'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type SubtaskType = 'code' | 'test' | 'review' | 'fix';
+export type SubtaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+// ============================================================================
 // Database Row Types
 // ============================================================================
+
+export interface DbOrchestration {
+  id: string;
+  session_id: string | null;
+  name: string;
+  project: string;
+  original_task: string;
+  status: OrchestrationStatus;
+  total_cost_usd: number;
+  created_at: number;
+  completed_at: number | null;
+}
+
+export interface DbOrchestrationMessage {
+  id: number;
+  orchestration_id: string;
+  role: 'user' | 'assistant';
+  content: string; // JSON string
+  created_at: number;
+}
+
+export interface DbSubtask {
+  id: string;
+  orchestration_id: string;
+  name: string;
+  type: SubtaskType;
+  status: SubtaskStatus;
+  cost_usd: number;
+  started_at: number | null;
+  completed_at: number | null;
+}
 
 export interface DbSession {
   id: number;
@@ -87,7 +134,7 @@ export interface UpsertEnvironmentInput {
 // SQL Schema Definitions
 // ============================================================================
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const CREATE_TABLES_SQL = `
 -- Sessions: current state of terminal sessions
@@ -155,6 +202,56 @@ CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- Orchestrator Tables (v5)
+-- ============================================================================
+
+-- Orchestrations: parent task coordinated by the orchestrator
+CREATE TABLE IF NOT EXISTS orchestrations (
+  id TEXT PRIMARY KEY,
+  session_id TEXT,
+  name TEXT NOT NULL,
+  project TEXT NOT NULL,
+  original_task TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'planning',
+  total_cost_usd REAL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  completed_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_orchestrations_project ON orchestrations(project);
+CREATE INDEX IF NOT EXISTS idx_orchestrations_status ON orchestrations(status);
+CREATE INDEX IF NOT EXISTS idx_orchestrations_created_at ON orchestrations(created_at);
+
+-- Orchestration messages: conversation history for persistence
+CREATE TABLE IF NOT EXISTS orchestration_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  orchestration_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (orchestration_id) REFERENCES orchestrations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_orch_messages_orchestration ON orchestration_messages(orchestration_id);
+CREATE INDEX IF NOT EXISTS idx_orch_messages_created ON orchestration_messages(created_at);
+
+-- Subtasks: individual tasks executed by sub-agents
+CREATE TABLE IF NOT EXISTS subtasks (
+  id TEXT PRIMARY KEY,
+  orchestration_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  cost_usd REAL DEFAULT 0,
+  started_at INTEGER,
+  completed_at INTEGER,
+  FOREIGN KEY (orchestration_id) REFERENCES orchestrations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_subtasks_orchestration ON subtasks(orchestration_id);
+CREATE INDEX IF NOT EXISTS idx_subtasks_status ON subtasks(status);
 `;
 
 // ============================================================================

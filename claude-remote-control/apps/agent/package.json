@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "247-shared": "workspace:*",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.2",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",

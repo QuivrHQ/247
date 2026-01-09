@@ -39,8 +39,16 @@ vi.mock('../../src/db/schema.js', () => ({
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS orchestrations (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      project TEXT NOT NULL,
+      status TEXT NOT NULL,
+      total_cost_usd REAL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
   `,
-  SCHEMA_VERSION: 3,
+  SCHEMA_VERSION: 5,
   RETENTION_CONFIG: {
     activeSessionMaxAge: 24 * 60 * 60 * 1000,
     archivedSessionMaxAge: 30 * 24 * 60 * 60 * 1000,
@@ -119,7 +127,7 @@ describe('Database Index', () => {
         .prepare('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1')
         .get() as { version: number };
 
-      expect(version.version).toBe(3);
+      expect(version.version).toBe(5);
     });
   });
 
@@ -180,6 +188,7 @@ describe('Database Index', () => {
       expect(stats.sessions).toBe(1);
       expect(stats.history).toBe(1);
       expect(stats.environments).toBe(1);
+      expect(stats.orchestrations).toBe(0);
     });
 
     it('returns zeros for empty database', async () => {
@@ -192,6 +201,7 @@ describe('Database Index', () => {
       expect(stats.sessions).toBe(0);
       expect(stats.history).toBe(0);
       expect(stats.environments).toBe(0);
+      expect(stats.orchestrations).toBe(0);
     });
   });
 

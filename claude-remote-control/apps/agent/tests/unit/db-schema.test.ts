@@ -25,8 +25,8 @@ describe('Database Schema', () => {
       expect(Number.isInteger(SCHEMA_VERSION)).toBe(true);
     });
 
-    it('current version is 4', () => {
-      expect(SCHEMA_VERSION).toBe(4);
+    it('current version is 5', () => {
+      expect(SCHEMA_VERSION).toBe(5);
     });
   });
 

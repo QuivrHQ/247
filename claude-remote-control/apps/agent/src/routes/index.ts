@@ -14,3 +14,4 @@ export {
   getOrStartEditor,
 } from './editor.js';
 export { createFilesRoutes } from './files.js';
+export { createOrchestratorRoutes } from './orchestrator.js';

@@ -97,6 +97,9 @@ function runMigrations(database: Database.Database): void {
     if (currentVersion < 4) {
       migrateToV4(database);
     }
+    if (currentVersion < 5) {
+      migrateToV5(database);
+    }
 
     // Record the new version
     database
@@ -207,6 +210,18 @@ function migrateToV4(database: Database.Database): void {
 }
 
 /**
+ * Migration to v5: Add orchestrator tables (orchestrations, orchestration_messages, subtasks)
+ * Tables are created via CREATE_TABLES_SQL, this migration just enables foreign keys
+ */
+function migrateToV5(database: Database.Database): void {
+  console.log('[DB] v5 migration: Creating orchestrator tables');
+  // Enable foreign keys for CASCADE deletes
+  database.pragma('foreign_keys = ON');
+  // Tables are already created via CREATE_TABLES_SQL with IF NOT EXISTS
+  // This migration is mainly for logging and future-proofing
+}
+
+/**
  * Get current schema version
  */
 function getCurrentSchemaVersion(database: Database.Database): number {
@@ -310,6 +325,7 @@ export function getDatabaseStats(): {
   sessions: number;
   history: number;
   environments: number;
+  orchestrations: number;
 } {
   const database = getDatabase();
 
@@ -322,11 +338,15 @@ export function getDatabaseStats(): {
   const environments = database.prepare('SELECT COUNT(*) as count FROM environments').get() as {
     count: number;
   };
+  const orchestrations = database.prepare('SELECT COUNT(*) as count FROM orchestrations').get() as {
+    count: number;
+  };
 
   return {
     sessions: sessions.count,
     history: history.count,
     environments: environments.count,
+    orchestrations: orchestrations.count,
   };
 }
 

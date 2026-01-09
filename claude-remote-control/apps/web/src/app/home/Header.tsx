@@ -12,7 +12,9 @@ import {
   Menu,
   HelpCircle,
   Settings,
+  Sparkles,
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { SelectedSession } from './types';
 
@@ -153,6 +155,18 @@ export function Header({
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Orchestrator button - desktop only */}
+            {!isMobile && (
+              <Link
+                href="/orchestrator"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-white/40 transition-colors hover:bg-cyan-500/10 hover:text-cyan-400"
+                title="Multi-Agent Orchestrator"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="text-xs font-medium">Orchestrator</span>
+              </Link>
+            )}
+
             {/* Guide button - desktop only */}
             {!isMobile && onOpenGuide && (
               <button

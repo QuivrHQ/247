@@ -33,6 +33,7 @@ import {
   generateSessionName,
   broadcastStatusUpdate,
 } from './status.js';
+import type { OrchestratorEvent } from './orchestrator/index.js';
 import type {
   WSMessageToAgent,
   SessionStatus,
@@ -384,4 +385,20 @@ export function handleStatusConnection(ws: WebSocket, url?: URL): void {
     console.error('[Status WS] Error:', err);
     statusSubscribers.delete(ws);
   });
+}
+
+/**
+ * Broadcast orchestrator events to all status subscribers
+ */
+export function broadcastOrchestratorEvent(event: OrchestratorEvent): void {
+  const message = JSON.stringify({
+    type: 'orchestrator-event',
+    event,
+  });
+
+  for (const ws of statusSubscribers) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+    }
+  }
 }

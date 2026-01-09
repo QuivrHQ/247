@@ -132,19 +132,10 @@ export function createTerminal(
       });
     }, 100);
   } else {
-    // For existing sessions, ensure mouse is enabled and re-inject CLAUDE_TMUX_SESSION
-    // The env var needs to be re-injected because the shell process might have changed
-    // (e.g., if user opened a new shell within tmux)
+    // For existing sessions, just ensure mouse is enabled
     // isReady is already true for existing sessions (set above)
     setTimeout(() => {
       exec(`tmux set-option -t "${sessionName}" mouse on`);
-      // Re-inject CLAUDE_TMUX_SESSION for statusLine heartbeat detection
-      const exportCmd = `export CLAUDE_TMUX_SESSION="${sessionName}"`;
-      const clearSequence = `printf '\\033[1A\\033[2K'`;
-      exec(`tmux send-keys -t "${sessionName}" "${exportCmd}; ${clearSequence}" C-m`);
-      console.log(
-        `[Terminal] Re-injected CLAUDE_TMUX_SESSION into EXISTING session '${sessionName}'`
-      );
     }, 100);
   }
 

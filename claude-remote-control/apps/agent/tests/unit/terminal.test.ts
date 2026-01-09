@@ -296,52 +296,5 @@ describe('Terminal', () => {
       // Should fire immediately since terminal is already ready
       expect(lateCallback).toHaveBeenCalledTimes(1);
     });
-
-    it('re-injects CLAUDE_TMUX_SESSION for existing sessions', async () => {
-      const { exec } = await import('child_process');
-      // Session exists
-      execSyncResponses['has-session'] = '';
-
-      vi.resetModules();
-      const { createTerminal } = await import('../../src/terminal.js');
-      createTerminal('/tmp/test', 'existing-env-test');
-
-      // Wait for setTimeout to fire (100ms)
-      await new Promise((r) => setTimeout(r, 150));
-
-      // Verify exec was called with CLAUDE_TMUX_SESSION export for existing sessions
-      // The command format is: tmux send-keys -t "session" "export CLAUDE_TMUX_SESSION=..." C-m
-      const calls = vi.mocked(exec).mock.calls;
-      const sendKeysCall = calls.find(
-        (call) =>
-          typeof call[0] === 'string' &&
-          call[0].includes('send-keys') &&
-          call[0].includes('CLAUDE_TMUX_SESSION')
-      );
-      expect(sendKeysCall).toBeDefined();
-      expect(sendKeysCall![0]).toContain('export CLAUDE_TMUX_SESSION="existing-env-test"');
-    });
-
-    it('includes clear sequence when re-injecting env for existing sessions', async () => {
-      const { exec } = await import('child_process');
-      // Session exists
-      execSyncResponses['has-session'] = '';
-
-      vi.resetModules();
-      const { createTerminal } = await import('../../src/terminal.js');
-      createTerminal('/tmp/test', 'existing-clear-test');
-
-      // Wait for setTimeout to fire
-      await new Promise((r) => setTimeout(r, 150));
-
-      // Verify the clear sequence is included in the send-keys command
-      const calls = vi.mocked(exec).mock.calls;
-      const sendKeysCall = calls.find(
-        (call) => typeof call[0] === 'string' && call[0].includes('send-keys')
-      );
-      expect(sendKeysCall).toBeDefined();
-      // Check for ANSI escape sequence (printf with escape codes)
-      expect(sendKeysCall![0]).toContain("printf '\\033[1A\\033[2K'");
-    });
   });
 });

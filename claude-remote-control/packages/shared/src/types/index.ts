@@ -24,6 +24,43 @@ export interface Session {
   endedAt: Date | null;
 }
 
+// Ralph Loop configuration (original implementation)
+export interface RalphLoopConfig {
+  prompt: string;
+  maxIterations?: number;
+  completionPromise?: string;
+  useWorktree?: boolean; // Create isolated git worktree for this loop
+  trustMode?: boolean; // Auto-accept all Claude tool permissions (--dangerously-skip-permissions)
+}
+
+// Ralph Loop Prompt Builder types
+export type RalphDeliverable = 'tests' | 'readme' | 'types' | 'docs' | 'custom';
+
+export interface RalphPromptBuilder {
+  taskDescription: string;
+  successCriteria: string[];
+  deliverables: RalphDeliverable[];
+  customDeliverable?: string;
+}
+
+// Labels for deliverables
+export const RALPH_DELIVERABLE_LABELS: Record<RalphDeliverable, string> = {
+  tests: 'Unit/integration tests with >80% coverage',
+  readme: 'Updated README documentation',
+  types: 'TypeScript types and interfaces',
+  docs: 'Code comments and JSDoc',
+  custom: '', // Uses customDeliverable value
+};
+
+// Suggested success criteria for quick selection
+export const RALPH_SUCCESS_CRITERIA_SUGGESTIONS = [
+  'All tests pass',
+  'No TypeScript errors',
+  'No linter errors',
+  'Code coverage >80%',
+  'Build succeeds',
+] as const;
+
 // User types
 export interface User {
   id: string;
@@ -37,6 +74,7 @@ export type WSMessageToAgent =
   | { type: 'input'; data: string }
   | { type: 'resize'; cols: number; rows: number }
   | { type: 'start-claude' }
+  | { type: 'start-claude-ralph'; config: RalphLoopConfig }
   | { type: 'ping' }
   | { type: 'request-history'; lines?: number };
 

@@ -93,6 +93,9 @@ export function createTerminal(
   const readyCallbacks: (() => void)[] = [];
 
   const fireReadyCallbacks = () => {
+    console.log(
+      `[Terminal] fireReadyCallbacks: firing ${readyCallbacks.length} callbacks for '${sessionName}'`
+    );
     isReady = true;
     readyCallbacks.forEach((cb) => cb());
     readyCallbacks.length = 0; // Clear the array
@@ -152,8 +155,12 @@ export function createTerminal(
     isExistingSession: () => existingSession,
     onReady: (callback: () => void) => {
       if (isReady) {
+        console.log(
+          `[Terminal] onReady: already ready, calling callback immediately for '${sessionName}'`
+        );
         callback();
       } else {
+        console.log(`[Terminal] onReady: not ready yet, queuing callback for '${sessionName}'`);
         readyCallbacks.push(callback);
       }
     },

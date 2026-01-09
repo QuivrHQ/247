@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import type { RalphLoopConfig } from '247-shared';
 import type { SessionStatus } from './ui/status-badge';
 import { type SessionInfo } from '@/lib/notifications';
 
@@ -20,6 +21,7 @@ interface SessionViewProps {
   agentUrl: string;
   sessionInfo?: SessionInfo;
   environmentId?: string;
+  ralphConfig?: RalphLoopConfig;
   onSessionCreated?: (sessionName: string) => void;
   /** Callback when menu button is clicked (goes back on desktop) */
   onMenuClick: () => void;
@@ -37,6 +39,7 @@ export function SessionView({
   agentUrl,
   sessionInfo,
   environmentId,
+  ralphConfig,
   onSessionCreated,
   onMenuClick,
   isMobile = false,
@@ -46,8 +49,18 @@ export function SessionView({
 
   const isNewSession = sessionName.endsWith('--new');
 
+  // Use a ref to store the initial key and keep it stable throughout the component's lifecycle.
+  // This prevents Terminal remount when sessionName changes from 'project--new' to actual name.
+  // Without this, the history clear would happen before Ralph Loop command is written.
+  const terminalKeyRef = useRef<string | null>(null);
+  if (terminalKeyRef.current === null) {
+    terminalKeyRef.current = isNewSession ? `${project}-new-session` : `${project}-${sessionName}`;
+  }
+  const terminalKey = terminalKeyRef.current;
+
   const handleSessionCreated = useCallback(
     (actualSessionName: string) => {
+      // Notify parent of session creation
       onSessionCreated?.(actualSessionName);
     },
     [onSessionCreated]
@@ -55,11 +68,12 @@ export function SessionView({
 
   return (
     <Terminal
-      key={`${project}-${sessionName}`}
+      key={terminalKey}
       agentUrl={agentUrl}
       project={project}
       sessionName={isNewSession ? undefined : sessionName}
       environmentId={environmentId}
+      ralphConfig={ralphConfig}
       onConnectionChange={setIsConnected}
       onSessionCreated={handleSessionCreated}
       claudeStatus={sessionInfo?.status}

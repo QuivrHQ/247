@@ -40,6 +40,11 @@ import type {
   WSSessionInfo,
   WSStatusMessageFromAgent,
 } from '247-shared';
+import * as path from 'path';
+
+// Track last Ralph Loop start times to debounce duplicate requests
+const ralphLoopLastStart = new Map<string, number>();
+const RALPH_DEBOUNCE_MS = 2000;
 import { getAgentVersion, needsUpdate } from './version.js';
 import { triggerUpdate, isUpdateInProgress } from './updater.js';
 
@@ -67,6 +72,31 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
   console.log(`New terminal connection for project: ${project}`);
   console.log(`Project path: ${projectPath}`);
 
+  // Buffer for messages received before async setup completes
+  // This prevents race condition where client sends messages before handler is registered
+  const messageBuffer: Buffer[] = [];
+  let setupComplete = false;
+  let terminalRef: ReturnType<typeof createTerminal> | null = null;
+
+  // Register message handler IMMEDIATELY (before any async code)
+  // This ensures no messages are lost during async initialization
+  ws.on('message', (data) => {
+    const msgStr = data.toString();
+    console.log(`[Terminal] Received message for '${sessionName}': ${msgStr.substring(0, 100)}...`);
+    if (!setupComplete || !terminalRef) {
+      // Buffer message for later processing
+      console.log(`[Terminal] Buffering message (setup not complete)`);
+      messageBuffer.push(data as Buffer);
+      return;
+    }
+    try {
+      const msg: WSMessageToAgent = JSON.parse(msgStr);
+      handleTerminalMessage(msg, terminalRef, ws, sessionName, project!, projectPath);
+    } catch (err) {
+      console.error('Failed to parse message:', err);
+    }
+  });
+
   // Async initialization
   (async () => {
     const fs = await import('fs');
@@ -93,6 +123,7 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
     let terminal;
     try {
       terminal = createTerminal(projectPath, sessionName, envVars);
+      terminalRef = terminal; // Store reference for early message handler
       if (environmentId) {
         setSessionEnvironment(sessionName, environmentId);
       }
@@ -177,7 +208,15 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
 
     // Forward terminal output
     terminal.onData((data: string) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(data);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data);
+        // Log first 100 chars of significant output for debugging
+        if (data.length > 10 && !data.startsWith('\x1b')) {
+          console.log(
+            `[Terminal] Sending ${data.length} bytes to client: ${data.substring(0, 100).replace(/\n/g, '\\n')}...`
+          );
+        }
+      }
     });
 
     terminal.onExit(({ exitCode }: { exitCode: number }) => {
@@ -185,15 +224,23 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
       if (ws.readyState === WebSocket.OPEN) ws.close(1000, 'Terminal closed');
     });
 
-    // Handle incoming messages
-    ws.on('message', (data) => {
-      try {
-        const msg: WSMessageToAgent = JSON.parse(data.toString());
-        handleTerminalMessage(msg, terminal, ws, sessionName, project!, projectPath);
-      } catch (err) {
-        console.error('Failed to parse message:', err);
+    // Process any messages that were buffered during async setup
+    setupComplete = true;
+    console.log(
+      `[Terminal] Setup complete for '${sessionName}', processing ${messageBuffer.length} buffered messages`
+    );
+    if (messageBuffer.length > 0) {
+      for (const bufferedData of messageBuffer) {
+        try {
+          const msg: WSMessageToAgent = JSON.parse(bufferedData.toString());
+          console.log(`[Terminal] Processing buffered message type: ${msg.type}`);
+          handleTerminalMessage(msg, terminal, ws, sessionName, project!, projectPath);
+        } catch (err) {
+          console.error('Failed to parse buffered message:', err);
+        }
       }
-    });
+      messageBuffer.length = 0; // Clear buffer
+    }
 
     ws.on('close', () => {
       console.log(`Client disconnected, tmux session '${sessionName}' preserved`);
@@ -250,6 +297,9 @@ function handleTerminalMessage(
     case 'start-claude':
       terminal.write('claude\r');
       break;
+    case 'start-claude-ralph':
+      handleRalphLoop(msg, terminal, sessionName, _projectPath);
+      break;
     case 'ping':
       ws.send(JSON.stringify({ type: 'pong' }));
       break;
@@ -266,6 +316,121 @@ function handleTerminalMessage(
         .catch((err) => console.error(`Failed to capture history:`, err));
       break;
   }
+}
+
+/**
+ * Handle Ralph Loop start
+ */
+function handleRalphLoop(
+  msg: WSMessageToAgent & { type: 'start-claude-ralph' },
+  terminal: ReturnType<typeof createTerminal>,
+  sessionName: string,
+  projectPath: string
+): void {
+  const now = Date.now();
+  const lastStart = ralphLoopLastStart.get(projectPath);
+  if (lastStart && now - lastStart < RALPH_DEBOUNCE_MS) {
+    console.log(`[Ralph] Ignoring duplicate for ${projectPath}`);
+    return;
+  }
+  ralphLoopLastStart.set(projectPath, now);
+
+  const ralphConfig = { ...msg.config };
+
+  console.log(`[Ralph] Registering onReady callback for session '${sessionName}'`);
+  terminal.onReady(() => {
+    console.log(`[Ralph] onReady fired, waiting 300ms before sending command`);
+    // Delay to let shell process exports and clear sequence before sending Claude command
+    setTimeout(() => {
+      console.log(`[Ralph] 300ms delay complete, preparing to write Claude command`);
+      (async () => {
+        const fsSync = await import('fs');
+        const claudeDir = path.join(projectPath, '.claude');
+        const ralphStateFile = path.join(claudeDir, 'ralph-loop.local.md');
+
+        // Ensure ralph-loop plugin is enabled for this project
+        const settingsFile = path.join(claudeDir, 'settings.json');
+        try {
+          let settings: { enabledPlugins?: Record<string, boolean> } = {};
+          if (fsSync.existsSync(settingsFile)) {
+            settings = JSON.parse(fsSync.readFileSync(settingsFile, 'utf-8'));
+          }
+          if (!settings.enabledPlugins) {
+            settings.enabledPlugins = {};
+          }
+          if (!settings.enabledPlugins['ralph-loop@claude-plugins-official']) {
+            console.log(`[Ralph] Enabling ralph-loop plugin for project`);
+            settings.enabledPlugins['ralph-loop@claude-plugins-official'] = true;
+            if (!fsSync.existsSync(claudeDir)) {
+              fsSync.mkdirSync(claudeDir, { recursive: true });
+            }
+            fsSync.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+          }
+        } catch (err) {
+          console.error(`[Ralph] Failed to enable plugin:`, err);
+        }
+
+        if (!fsSync.existsSync(claudeDir)) {
+          fsSync.mkdirSync(claudeDir, { recursive: true });
+        }
+
+        const ralphState = `---
+iteration: 1
+maxIterations: ${ralphConfig.maxIterations || 'unlimited'}
+completionPromise: ${ralphConfig.completionPromise || 'none'}
+useWorktree: ${ralphConfig.useWorktree || false}
+trustMode: ${ralphConfig.trustMode || false}
+active: true
+createdAt: ${new Date().toISOString()}
+---
+
+# Ralph Loop Task
+
+${ralphConfig.prompt}
+
+---
+*This file is auto-generated by 247 Dashboard. Do not edit manually.*
+`;
+        fsSync.writeFileSync(ralphStateFile, ralphState);
+
+        if (ralphConfig.useWorktree) {
+          const branchName = `ralph-${sessionName}-${Date.now()}`;
+          terminal.write(
+            `git worktree add -b ${branchName} ../ralph-${branchName} 2>/dev/null || echo "Worktree setup skipped"\r`
+          );
+          terminal.write(`cd ../ralph-${branchName} && `);
+        }
+
+        // Build Claude command flags
+        const claudeFlags: string[] = [];
+        if (ralphConfig.trustMode) {
+          claudeFlags.push('--dangerously-skip-permissions');
+        }
+
+        // Build ralph-loop command arguments
+        const ralphArgs: string[] = [];
+        if (ralphConfig.maxIterations)
+          ralphArgs.push(`--max-iterations ${ralphConfig.maxIterations}`);
+        if (ralphConfig.completionPromise)
+          ralphArgs.push(`--completion-promise "${ralphConfig.completionPromise}"`);
+
+        // Escape the prompt for single-quotes (safer for shell - avoids nested quote issues)
+        const promptEscapedForSingleQuotes = ralphConfig.prompt
+          .replace(/\n/g, ' ')
+          .replace(/'/g, "'\\''");
+
+        // Build args string
+        const argsStr = ralphArgs.length > 0 ? ` ${ralphArgs.join(' ')}` : '';
+
+        // Launch Claude with the ralph-loop command as initial prompt (single-quoted)
+        // Format: /pluginName:commandName - so /ralph-loop:ralph-loop
+        const claudeFlagsStr = claudeFlags.length > 0 ? `${claudeFlags.join(' ')} ` : '';
+        const fullCommand = `claude ${claudeFlagsStr}'/ralph-loop:ralph-loop ${promptEscapedForSingleQuotes}${argsStr}'`;
+        console.log(`[Ralph] Writing command to terminal: ${fullCommand.substring(0, 100)}...`);
+        terminal.write(`${fullCommand}\r`);
+      })();
+    }, 300); // 300ms delay to let shell stabilize
+  });
 }
 
 /**

@@ -15,6 +15,7 @@ import {
   WS_ACTIVITY_PAUSE,
 } from '../constants';
 import { buildWebSocketUrl } from '@/lib/utils';
+import type { RalphLoopConfig } from '247-shared';
 
 interface UseTerminalConnectionProps {
   terminalRef: React.RefObject<HTMLDivElement | null>;
@@ -22,6 +23,7 @@ interface UseTerminalConnectionProps {
   project: string;
   sessionName: string;
   environmentId?: string;
+  ralphConfig?: RalphLoopConfig;
   onSessionCreated?: (name: string) => void;
   onCopySuccess: () => void;
   /** Mobile mode - use smaller font and handle orientation changes */
@@ -34,6 +36,7 @@ export function useTerminalConnection({
   project,
   sessionName,
   environmentId,
+  ralphConfig,
   onSessionCreated,
   onCopySuccess,
   isMobile = false,
@@ -62,6 +65,14 @@ export function useTerminalConnection({
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const awaitingPongRef = useRef<boolean>(false);
+
+  // Ref to always have latest ralphConfig in closure (avoids stale closure issue)
+  const ralphConfigRef = useRef<RalphLoopConfig | undefined>(ralphConfig);
+
+  // Keep ref in sync with prop
+  useEffect(() => {
+    ralphConfigRef.current = ralphConfig;
+  }, [ralphConfig]);
 
   const scrollToBottom = useCallback(() => {
     xtermRef.current?.scrollToBottom();
@@ -425,6 +436,17 @@ export function useTerminalConnection({
         currentWs.send(
           JSON.stringify({ type: 'resize', cols: currentTerm.cols, rows: currentTerm.rows })
         );
+
+        // For new sessions with Ralph Loop config, send start-claude-ralph message
+        // Use ref to get latest value (avoids stale closure issue)
+        const currentRalphConfig = ralphConfigRef.current;
+        if (isNewSession && currentRalphConfig && currentRalphConfig.prompt) {
+          console.log('[Terminal] Starting Ralph Loop with config:', currentRalphConfig);
+          currentWs.send(
+            JSON.stringify({ type: 'start-claude-ralph', config: currentRalphConfig })
+          );
+        }
+
         if (onSessionCreated && sessionName) onSessionCreated(sessionName);
 
         // Start adaptive heartbeat to detect silent disconnections
@@ -666,6 +688,7 @@ export function useTerminalConnection({
     };
     // Note: onSessionCreated, onCopySuccess, and terminalRef are intentionally excluded
     // from deps - they are refs/callbacks that shouldn't cause reconnection
+    // ralphConfig is intentionally excluded - it's only used on initial connection for new sessions
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentUrl, project, sessionName, environmentId]);
 

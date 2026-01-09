@@ -1,3 +1,5 @@
+import type { RalphLoopConfig } from '247-shared';
+
 export interface LocalMachine {
   id: string;
   name: string;
@@ -13,6 +15,7 @@ export interface SelectedSession {
   sessionName: string;
   project: string;
   environmentId?: string;
+  ralphConfig?: RalphLoopConfig;
 }
 
 export const DEFAULT_MACHINE_ID = 'local-agent';

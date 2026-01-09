@@ -11,12 +11,14 @@ import { useTerminalConnection, useTerminalSearch } from './hooks';
 import { useKeybarVisibility } from '@/hooks/useKeybarVisibility';
 import { MinimalSessionHeader } from '@/components/MinimalSessionHeader';
 import type { SessionStatus } from '@/components/ui/status-badge';
+import type { RalphLoopConfig } from '247-shared';
 
 interface TerminalProps {
   agentUrl: string;
   project: string;
   sessionName?: string;
   environmentId?: string;
+  ralphConfig?: RalphLoopConfig;
   onConnectionChange?: (connected: boolean) => void;
   onSessionCreated?: (sessionName: string) => void;
   claudeStatus?: 'init' | 'working' | 'needs_attention' | 'idle';
@@ -37,6 +39,7 @@ export function Terminal({
   project,
   sessionName,
   environmentId,
+  ralphConfig,
   onConnectionChange,
   onSessionCreated,
   claudeStatus,
@@ -80,6 +83,7 @@ export function Terminal({
     project,
     sessionName: effectiveSessionName,
     environmentId,
+    ralphConfig,
     onSessionCreated,
     onCopySuccess: handleCopySuccess,
     isMobile,

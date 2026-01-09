@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
 import { loadAgentConnection, saveAgentConnection } from '@/components/AgentConnectionSettings';
+import type { RalphLoopConfig } from '247-shared';
 import type { LocalMachine, SelectedSession } from './types';
 import { DEFAULT_MACHINE_ID } from './types';
 
@@ -125,13 +126,14 @@ export function useHomeState() {
   );
 
   const handleStartSession = useCallback(
-    (machineId: string, project: string, environmentId?: string) => {
+    (machineId: string, project: string, environmentId?: string, ralphConfig?: RalphLoopConfig) => {
       const newSessionName = `${project}--new`;
       setSelectedSession({
         machineId,
         sessionName: newSessionName,
         project,
         environmentId,
+        ralphConfig,
       });
       setNewSessionOpen(false);
 

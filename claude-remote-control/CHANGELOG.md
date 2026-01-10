@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-10
+
+### Features
+
+- **worktree**: enable Git worktree isolation with Push/PR UI actions (52eed31)
+- **database**: add Ralph mode support with new columns and migration to v5 (af307c2)
+
 ## [1.3.0] - 2026-01-10
 
 ### Features

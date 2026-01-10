@@ -34,8 +34,13 @@ export function createTerminal(
 
   if (Object.keys(customEnvVars).length > 0) {
     console.log(
-      `[Terminal] Custom env vars for injection: ${Object.keys(customEnvVars).join(', ')}`
+      `[Terminal] Custom env vars received: ${JSON.stringify(Object.keys(customEnvVars))}`
     );
+    // Log which vars have non-empty values (without exposing secrets)
+    const nonEmptyKeys = Object.entries(customEnvVars)
+      .filter(([, v]) => v && v.trim() !== '')
+      .map(([k]) => k);
+    console.log(`[Terminal] Non-empty vars that will be exported: ${JSON.stringify(nonEmptyKeys)}`);
   }
 
   // Use tmux for session persistence
@@ -124,6 +129,9 @@ export function createTerminal(
 
       console.log(
         `[Terminal] Injecting CLAUDE_TMUX_SESSION and ${nonEmptyVars.length} custom vars into NEW session '${sessionName}'`
+      );
+      console.log(
+        `[Terminal] Export command preview: ${allExports.substring(0, 300)}${allExports.length > 300 ? '...' : ''}`
       );
       // Séquences ANSI pour effacer les lignes après exécution
       // \033[1A = remonter d'une ligne, \033[2K = effacer la ligne

@@ -110,6 +110,9 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
     }
 
     const envVars = getEnvironmentVariables(environmentId || undefined);
+    console.log(
+      `[WS] Environment ID: ${environmentId || 'none'}, fetched vars: ${JSON.stringify(Object.keys(envVars))}`
+    );
 
     // Check if session exists before attempting to create/connect
     const sessionExists = tmuxSessionExists(sessionName);

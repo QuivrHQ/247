@@ -20,6 +20,33 @@ export function createEnvironmentRoutes(): Router {
     res.json(getEnvironmentsMetadata());
   });
 
+  // Debug endpoint - shows what would be exported (for troubleshooting)
+  router.get('/:id/debug', (req, res) => {
+    const env = getEnvironment(req.params.id);
+    if (!env) {
+      return res.status(404).json({ error: 'Environment not found' });
+    }
+
+    const nonEmpty = Object.entries(env.variables).filter(
+      ([, value]) => value && value.trim() !== ''
+    );
+
+    res.json({
+      id: env.id,
+      name: env.name,
+      provider: env.provider,
+      isDefault: env.isDefault,
+      totalVariables: Object.keys(env.variables).length,
+      nonEmptyVariables: nonEmpty.length,
+      variableNames: Object.keys(env.variables),
+      wouldExport: nonEmpty.map(([key]) => key),
+      // Show if variables are empty (common issue)
+      emptyVariables: Object.entries(env.variables)
+        .filter(([, value]) => !value || value.trim() === '')
+        .map(([key]) => key),
+    });
+  });
+
   // Get single environment metadata
   router.get('/:id', (req, res) => {
     const metadata = getEnvironmentMetadata(req.params.id);

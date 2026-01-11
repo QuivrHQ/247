@@ -15,6 +15,7 @@ import {
   showSessionNotification,
 } from '@/lib/notifications';
 import { buildWebSocketUrl, buildApiUrl } from '@/lib/utils';
+import { subscribeToPush, isSubscribedToAgent, isPushAvailable } from '@/lib/push-subscription';
 import type { WSStatusMessageFromAgent } from '247-shared';
 
 export interface Machine {
@@ -101,6 +102,29 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     requestNotificationPermission();
   }, []);
+
+  // Subscribe to push notifications for connected agents
+  // This runs when machines change or WebSocket connects
+  useEffect(() => {
+    if (!isPushAvailable()) return;
+
+    const onlineMachines = machines.filter((m) => m.status === 'online');
+
+    for (const machine of onlineMachines) {
+      const agentUrl = machine.config?.agentUrl || 'localhost:4678';
+      const fullUrl = buildApiUrl(agentUrl, '').replace(/\/$/, ''); // Base URL without trailing slash
+
+      // Check if already subscribed
+      if (!isSubscribedToAgent(fullUrl)) {
+        // Subscribe to push notifications in the background
+        subscribeToPush(fullUrl).then((success) => {
+          if (success) {
+            console.log(`[Push] Subscribed to agent: ${machine.name}`);
+          }
+        });
+      }
+    }
+  }, [machines]);
 
   // NOTE: Machines are now managed by the parent component (from localStorage)
   // We no longer fetch from /api/machines - the dashboard is stateless!

@@ -29,6 +29,8 @@ import {
   updateEditorActivity,
   getOrStartEditor,
 } from './routes/index.js';
+import { createPushRoutes } from './routes/push.js';
+import { initWebPush } from './push/vapid.js';
 
 // StatusLine setup and heartbeat monitor
 import { ensureStatusLineConfigured } from './setup-statusline.js';
@@ -80,6 +82,9 @@ export async function createServer() {
   // Configure statusLine for Claude Code integration
   ensureStatusLineConfigured();
 
+  // Initialize Web Push for notifications
+  initWebPush();
+
   // Start heartbeat timeout monitor
   startHeartbeatMonitor();
 
@@ -92,6 +97,7 @@ export async function createServer() {
   app.use('/api/stop', createStopRoutes());
   app.use('/api/editor', createEditorRoutes());
   app.use('/api/files', createFilesRoutes());
+  app.use('/api/push', createPushRoutes());
 
   // Editor proxy middleware
   app.use('/editor/:project', async (req, res) => {

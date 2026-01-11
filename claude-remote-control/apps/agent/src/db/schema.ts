@@ -103,7 +103,7 @@ export interface UpsertEnvironmentInput {
 // SQL Schema Definitions
 // ============================================================================
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const CREATE_TABLES_SQL = `
 -- Sessions: current state of terminal sessions
@@ -179,6 +179,18 @@ CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL
 );
+
+-- Push subscriptions for Web Push notifications (v8)
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  endpoint TEXT UNIQUE NOT NULL,
+  keys_p256dh TEXT NOT NULL,
+  keys_auth TEXT NOT NULL,
+  user_agent TEXT,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_endpoint ON push_subscriptions(endpoint);
 `;
 
 // ============================================================================

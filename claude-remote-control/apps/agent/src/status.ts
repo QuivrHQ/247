@@ -14,6 +14,7 @@ import type {
 import { RETENTION_CONFIG } from './db/index.js';
 import * as sessionsDb from './db/sessions.js';
 import * as historyDb from './db/history.js';
+import { sendPushNotification } from './push/sender.js';
 
 // Store session status from Claude Code statusLine/hooks
 export interface HookStatus {
@@ -46,19 +47,28 @@ export const statusSubscribers = new Set<WebSocket>();
  * Broadcast status update to all subscribers
  */
 export function broadcastStatusUpdate(session: WSSessionInfo): void {
-  if (statusSubscribers.size === 0) return;
+  // Send WebSocket update to connected clients
+  if (statusSubscribers.size > 0) {
+    const message: WSStatusMessageFromAgent = { type: 'status-update', session };
+    const messageStr = JSON.stringify(message);
 
-  const message: WSStatusMessageFromAgent = { type: 'status-update', session };
-  const messageStr = JSON.stringify(message);
-
-  for (const ws of statusSubscribers) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(messageStr);
+    for (const ws of statusSubscribers) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(messageStr);
+      }
     }
+    console.log(
+      `[Status WS] Broadcast status update for ${session.name}: ${session.status} to ${statusSubscribers.size} subscribers`
+    );
   }
-  console.log(
-    `[Status WS] Broadcast status update for ${session.name}: ${session.status} to ${statusSubscribers.size} subscribers`
-  );
+
+  // Send Web Push notification for needs_attention status
+  // This reaches users even when browser is closed
+  if (session.status === 'needs_attention') {
+    sendPushNotification(session).catch((err) => {
+      console.error('[Status] Failed to send push notification:', err);
+    });
+  }
 }
 
 /**

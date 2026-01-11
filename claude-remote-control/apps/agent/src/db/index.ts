@@ -106,6 +106,9 @@ function runMigrations(database: Database.Database): void {
     if (currentVersion < 7) {
       migrateToV7(database);
     }
+    if (currentVersion < 8) {
+      migrateToV8(database);
+    }
 
     // Record the new version
     database
@@ -303,6 +306,31 @@ function migrateToV6(database: Database.Database): void {
 function migrateToV7(_database: Database.Database): void {
   // Previously created projects and issues tables, but this feature has been removed
   console.log('[DB] v7 migration: No-op (projects/issues feature removed)');
+}
+
+/**
+ * Migration to v8: Add push_subscriptions table for Web Push notifications
+ */
+function migrateToV8(database: Database.Database): void {
+  // Check if table already exists
+  const tableExists = database
+    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='push_subscriptions'`)
+    .get();
+
+  if (!tableExists) {
+    console.log('[DB] v8 migration: Creating push_subscriptions table');
+    database.exec(`
+      CREATE TABLE push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        endpoint TEXT UNIQUE NOT NULL,
+        keys_p256dh TEXT NOT NULL,
+        keys_auth TEXT NOT NULL,
+        user_agent TEXT,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX idx_push_endpoint ON push_subscriptions(endpoint);
+    `);
+  }
 }
 
 /**

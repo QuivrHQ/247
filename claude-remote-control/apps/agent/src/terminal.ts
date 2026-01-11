@@ -21,12 +21,6 @@ export interface Terminal {
 export interface CreateTerminalOptions {
   /** Custom environment variables to inject into the session */
   customEnvVars?: Record<string, string>;
-  /** Issue plan to inject as Claude context */
-  issuePlan?: string;
-  /** Issue title for display */
-  issueTitle?: string;
-  /** Planning prompt to start Claude with (for planning sessions) */
-  planningPrompt?: string;
 }
 
 export function createTerminal(
@@ -35,10 +29,10 @@ export function createTerminal(
   options: CreateTerminalOptions | Record<string, string> = {}
 ): Terminal {
   // Support both old signature (customEnvVars object) and new options object
-  const { customEnvVars = {}, issuePlan, issueTitle, planningPrompt } =
-    'customEnvVars' in options || 'issuePlan' in options || 'issueTitle' in options || 'planningPrompt' in options
+  const { customEnvVars = {} } =
+    'customEnvVars' in options
       ? (options as CreateTerminalOptions)
-      : { customEnvVars: options as Record<string, string>, issuePlan: undefined, issueTitle: undefined, planningPrompt: undefined };
+      : { customEnvVars: options as Record<string, string> };
   // Check if session already exists before spawning
   let existingSession = false;
   try {
@@ -75,9 +69,6 @@ export function createTerminal(
       projectName,
       customEnvVars,
       shell: 'bash',
-      issuePlan,
-      issueTitle,
-      planningPrompt,
     });
     initScriptPath = writeInitScript(sessionName, scriptContent);
     console.log(`[Terminal] Init script written to: ${initScriptPath}`);

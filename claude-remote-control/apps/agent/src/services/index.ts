@@ -8,6 +8,3 @@ export type { SessionInfo, CapacityInfo } from './execution.js';
 
 export { CleanupService, initCleanupService, getCleanupService } from './cleanup.js';
 export type { CleanupConfig, CleanupResult } from './cleanup.js';
-
-export { PlannerService, plannerService } from './planner.js';
-export type { PlanningSession, GeneratedPlan, PlannerEvents } from './planner.js';

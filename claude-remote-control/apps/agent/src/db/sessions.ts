@@ -62,14 +62,14 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       last_activity, last_status_change, environment_id, created_at, updated_at,
       model, cost_usd, context_usage, lines_added, lines_removed,
       ralph_enabled, ralph_config, ralph_iteration, ralph_status,
-      worktree_path, branch_name, issue_id
+      worktree_path, branch_name
     )
     VALUES (
       @name, @project, @status, @attentionReason, @lastEvent,
       @lastActivity, @lastStatusChange, @environmentId, @createdAt, @updatedAt,
       @model, @costUsd, @contextUsage, @linesAdded, @linesRemoved,
       @ralphEnabled, @ralphConfig, @ralphIteration, @ralphStatus,
-      @worktreePath, @branchName, @issueId
+      @worktreePath, @branchName
     )
     ON CONFLICT(name) DO UPDATE SET
       status = @status,
@@ -89,8 +89,7 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       ralph_iteration = COALESCE(@ralphIteration, ralph_iteration),
       ralph_status = COALESCE(@ralphStatus, ralph_status),
       worktree_path = COALESCE(@worktreePath, worktree_path),
-      branch_name = COALESCE(@branchName, branch_name),
-      issue_id = COALESCE(@issueId, issue_id)
+      branch_name = COALESCE(@branchName, branch_name)
   `);
 
   stmt.run({
@@ -115,7 +114,6 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
     ralphStatus: input.ralphStatus ?? null,
     worktreePath: input.worktreePath ?? null,
     branchName: input.branchName ?? null,
-    issueId: input.issueId ?? null,
   });
 
   // Record status history if status changed

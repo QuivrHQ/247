@@ -3,8 +3,6 @@
  */
 
 export { createProjectRoutes } from './projects.js';
-export { createManagedProjectRoutes } from './managed-projects.js';
-export { createIssueRoutes } from './issues.js';
 export { createEnvironmentRoutes } from './environments.js';
 export { createSessionRoutes } from './sessions.js';
 export { createHeartbeatRoutes } from './heartbeat.js';

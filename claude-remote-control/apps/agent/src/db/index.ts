@@ -196,12 +196,6 @@ function ensureRequiredColumns(database: Database.Database): void {
       database.exec(col.sql);
     }
   }
-
-  // v7: Issue link column
-  if (!sessionColumnNames.has('issue_id')) {
-    console.log('[DB] Adding missing issue_id column to sessions');
-    database.exec('ALTER TABLE sessions ADD COLUMN issue_id TEXT');
-  }
 }
 
 /**
@@ -304,20 +298,11 @@ function migrateToV6(database: Database.Database): void {
 }
 
 /**
- * Migration to v7: Add issue_id column to sessions table + create projects/issues tables
+ * Migration to v7: No-op (projects/issues tables removed)
  */
-function migrateToV7(database: Database.Database): void {
-  // Check if issue_id column already exists in sessions
-  const columns = database.pragma('table_info(sessions)') as Array<{ name: string }>;
-  const columnNames = new Set(columns.map((c) => c.name));
-
-  if (!columnNames.has('issue_id')) {
-    console.log('[DB] v7 migration: Adding issue_id column to sessions');
-    database.exec('ALTER TABLE sessions ADD COLUMN issue_id TEXT');
-  }
-
-  // Note: projects and issues tables are created via CREATE_TABLES_SQL (IF NOT EXISTS)
-  console.log('[DB] v7 migration: Projects and issues tables will be created via schema');
+function migrateToV7(_database: Database.Database): void {
+  // Previously created projects and issues tables, but this feature has been removed
+  console.log('[DB] v7 migration: No-op (projects/issues feature removed)');
 }
 
 /**

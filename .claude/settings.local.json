@@ -255,7 +255,8 @@
       "Bash(claude --version:*)",
       "Bash(git cat-file:*)",
       "Bash(pnpm build:web:*)",
-      "Skill(ralph-loop:ralph-loop)"
+      "Skill(ralph-loop:ralph-loop)",
+      "Bash(pnpm --filter 247-web add:*)"
     ]
   },
   "remote": {

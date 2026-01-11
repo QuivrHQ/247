@@ -188,6 +188,7 @@ export function HomeContent() {
               sessionInfo={getSelectedSessionInfo()}
               environmentId={selectedSession.environmentId}
               ralphConfig={selectedSession.ralphConfig}
+              planningProjectId={selectedSession.planningProjectId}
               onMenuClick={handleMenuClick}
               onSessionCreated={handleSessionCreated}
               isMobile={isMobile}

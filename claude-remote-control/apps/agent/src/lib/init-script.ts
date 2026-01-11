@@ -7,6 +7,12 @@ export interface InitScriptOptions {
   projectName: string;
   customEnvVars?: Record<string, string>;
   shell?: 'bash' | 'zsh';
+  /** Issue plan to inject as Claude context (written to .claude/current-task.md) */
+  issuePlan?: string;
+  /** Issue title for display in welcome message */
+  issueTitle?: string;
+  /** Planning prompt to start Claude with (for planning sessions) */
+  planningPrompt?: string;
 }
 
 /**
@@ -23,7 +29,7 @@ export function detectUserShell(): 'bash' | 'zsh' {
  * Features: adaptive prompt, tmux status bar, useful aliases, welcome message.
  */
 export function generateInitScript(options: InitScriptOptions): string {
-  const { sessionName, projectName, customEnvVars = {}, shell = detectUserShell() } = options;
+  const { sessionName, projectName, customEnvVars = {}, shell = detectUserShell(), issuePlan, issueTitle, planningPrompt } = options;
 
   const escapedSession = escapeForBash(sessionName);
   const escapedProject = escapeForBash(projectName);
@@ -167,7 +173,32 @@ alias ll='ls -lah'
 alias ..='cd ..'
 alias ...='cd ../..'`;
 
-  const welcomeMessage = `
+  // Issue plan injection - writes plan to .claude/current-task.md for Claude context
+  const escapedIssueTitle = issueTitle ? escapeForBash(issueTitle) : '';
+  const issuePlanSection = issuePlan ? `
+# ═══════════════════════════════════════════════════════════════
+# SECTION 6.5: Issue Plan Injection
+# ═══════════════════════════════════════════════════════════════
+mkdir -p .claude 2>/dev/null
+cat > .claude/current-task.md << 'ISSUE_PLAN_EOF'
+# Current Task
+
+${issuePlan}
+ISSUE_PLAN_EOF
+echo -e "\\e[38;5;${colors.cyan}m[247] Issue plan written to .claude/current-task.md\\e[0m"
+` : '';
+
+  const welcomeMessage = issueTitle ? `
+# Welcome message (with issue)
+echo ""
+echo -e "\\e[38;5;${colors.muted}m─────────────────────────────────────────────\\e[0m"
+echo -e "\\e[38;5;${colors.orange}m\\e[1m 247\\e[0m \\e[38;5;${colors.muted}m|\\e[0m \\e[38;5;${colors.green}m${escapedProject}\\e[0m"
+echo -e "\\e[38;5;${colors.muted}m─────────────────────────────────────────────\\e[0m"
+echo -e "\\e[38;5;${colors.muted}mSession:\\e[0m \\e[38;5;${colors.cyan}m${escapedSession}\\e[0m"
+echo -e "\\e[38;5;${colors.muted}mTask:   \\e[0m \\e[38;5;${colors.green}m${escapedIssueTitle}\\e[0m"
+echo -e "\\e[38;5;${colors.muted}mTips:   \\e[0m \\e[38;5;${colors.muted}mType\\e[0m c \\e[38;5;${colors.muted}mto start Claude Code\\e[0m"
+echo -e "\\e[38;5;${colors.muted}m─────────────────────────────────────────────\\e[0m"
+echo ""` : `
 # Welcome message
 echo ""
 echo -e "\\e[38;5;${colors.muted}m─────────────────────────────────────────────\\e[0m"
@@ -220,16 +251,31 @@ ${promptConfig}
 # SECTION 5: Useful Aliases
 # ═══════════════════════════════════════════════════════════════
 ${aliases}
-
+${issuePlanSection}
 # ═══════════════════════════════════════════════════════════════
 # SECTION 6: Welcome Message
 # ═══════════════════════════════════════════════════════════════
 ${welcomeMessage}
 
 # ═══════════════════════════════════════════════════════════════
-# SECTION 7: Start Interactive Shell
+# SECTION 7: Start Session
 # ═══════════════════════════════════════════════════════════════
+${planningPrompt ? `
+# Planning mode - write prompt to file and start Claude with it
+PLANNING_PROMPT_FILE="/tmp/247-planning-${escapedSession}.md"
+cat > "$PLANNING_PROMPT_FILE" << 'PLANNING_PROMPT_EOF'
+${planningPrompt}
+PLANNING_PROMPT_EOF
+
+echo -e "\\e[38;5;${colors.cyan}m[247] Starting Claude with planning prompt...\\e[0m"
+echo ""
+
+# Start Claude with the planning prompt content (passed as initial message)
+claude "$(cat $PLANNING_PROMPT_FILE)"
+
+# After Claude exits, start interactive shell
 exec ${shell} -i
+` : `exec ${shell} -i`}
 `;
 }
 

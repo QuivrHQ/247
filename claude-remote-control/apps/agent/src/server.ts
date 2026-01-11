@@ -18,6 +18,8 @@ import type { AgentConfig } from '247-shared';
 // Routes
 import {
   createProjectRoutes,
+  createManagedProjectRoutes,
+  createIssueRoutes,
   createEnvironmentRoutes,
   createSessionRoutes,
   createHeartbeatRoutes,
@@ -37,6 +39,7 @@ import { startHeartbeatMonitor, stopHeartbeatMonitor } from './heartbeat-monitor
 // Status and WebSocket
 import { tmuxSessionStatus, cleanupStatusMaps, getActiveTmuxSessions } from './status.js';
 import { handleTerminalConnection, handleStatusConnection } from './websocket-handlers.js';
+import { handlePlanningConnection } from './websocket-handlers-planning.js';
 
 export async function createServer() {
   const app = express();
@@ -85,6 +88,8 @@ export async function createServer() {
 
   // Mount API routes
   app.use('/api', createProjectRoutes());
+  app.use('/api/managed-projects', createManagedProjectRoutes());
+  app.use('/api/issues', createIssueRoutes());
   app.use('/api/environments', createEnvironmentRoutes());
   app.use('/api/sessions', createSessionRoutes());
   app.use('/api/heartbeat', createHeartbeatRoutes());
@@ -129,6 +134,13 @@ export async function createServer() {
     if (url.pathname === '/status') {
       wss.handleUpgrade(req, socket, head, (ws) => {
         handleStatusConnection(ws, url);
+      });
+      return;
+    }
+
+    if (url.pathname === '/planning') {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        handlePlanningConnection(ws, url);
       });
       return;
     }

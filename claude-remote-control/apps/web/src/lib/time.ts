@@ -29,3 +29,10 @@ export function formatRelativeTime(timestamp: number): string {
   const days = Math.floor(seconds / 86400);
   return `${days}d ago`;
 }
+
+/**
+ * Format a timestamp as a human-readable distance from now
+ */
+export function formatDistanceToNow(timestamp: number): string {
+  return formatRelativeTime(timestamp);
+}

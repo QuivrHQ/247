@@ -19,6 +19,7 @@ interface TerminalProps {
   sessionName?: string;
   environmentId?: string;
   ralphConfig?: RalphLoopConfig;
+  planningProjectId?: string;
   onConnectionChange?: (connected: boolean) => void;
   onSessionCreated?: (sessionName: string) => void;
   claudeStatus?: 'init' | 'working' | 'needs_attention' | 'idle';
@@ -40,6 +41,7 @@ export function Terminal({
   sessionName,
   environmentId,
   ralphConfig,
+  planningProjectId,
   onConnectionChange,
   onSessionCreated,
   claudeStatus,
@@ -84,6 +86,7 @@ export function Terminal({
     sessionName: effectiveSessionName,
     environmentId,
     ralphConfig,
+    planningProjectId,
     onSessionCreated,
     onCopySuccess: handleCopySuccess,
     isMobile,

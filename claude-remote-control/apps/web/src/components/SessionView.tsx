@@ -22,6 +22,7 @@ interface SessionViewProps {
   sessionInfo?: SessionInfo;
   environmentId?: string;
   ralphConfig?: RalphLoopConfig;
+  planningProjectId?: string;
   onSessionCreated?: (sessionName: string) => void;
   /** Callback when menu button is clicked (goes back on desktop) */
   onMenuClick: () => void;
@@ -40,6 +41,7 @@ export function SessionView({
   sessionInfo,
   environmentId,
   ralphConfig,
+  planningProjectId,
   onSessionCreated,
   onMenuClick,
   isMobile = false,
@@ -74,6 +76,7 @@ export function SessionView({
       sessionName={isNewSession ? undefined : sessionName}
       environmentId={environmentId}
       ralphConfig={ralphConfig}
+      planningProjectId={planningProjectId}
       onConnectionChange={setIsConnected}
       onSessionCreated={handleSessionCreated}
       claudeStatus={sessionInfo?.status}

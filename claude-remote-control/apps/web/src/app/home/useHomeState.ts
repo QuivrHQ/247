@@ -51,13 +51,29 @@ export function useHomeState() {
     setLoading(false);
   }, [setPollingMachines]);
 
-  // Restore session from URL on load
+  // Restore session from URL on load OR create new session from URL params
   useEffect(() => {
     if (hasRestoredFromUrl.current) return;
 
     const sessionParam = searchParams.get('session');
     const machineParam = searchParams.get('machine') || DEFAULT_MACHINE_ID;
+    const createParam = searchParams.get('create') === 'true';
+    const projectParam = searchParams.get('project');
+    const planningProjectIdParam = searchParams.get('planningProjectId');
 
+    // Handle session creation from URL (e.g., from planning modal)
+    if (createParam && sessionParam && projectParam) {
+      setSelectedSession({
+        machineId: machineParam,
+        sessionName: sessionParam,
+        project: projectParam,
+        planningProjectId: planningProjectIdParam || undefined,
+      });
+      hasRestoredFromUrl.current = true;
+      return;
+    }
+
+    // Handle restoring existing session from URL
     if (sessionParam && allSessions.length > 0) {
       const session = allSessions.find(
         (s) => s.name === sessionParam && s.machineId === machineParam

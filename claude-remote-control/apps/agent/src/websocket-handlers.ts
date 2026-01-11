@@ -7,7 +7,10 @@ import { execSync } from 'child_process';
 import { createTerminal } from './terminal.js';
 import { config } from './config.js';
 import * as sessionsDb from './db/sessions.js';
+import * as issuesDb from './db/issues.js';
+import * as projectsDb from './db/projects.js';
 import { worktreeManager, executionManager } from './services/index.js';
+import { generatePlanningPrompt } from './lib/planning-prompt.js';
 
 /**
  * Check if a tmux session exists
@@ -59,7 +62,16 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
   const createFlag = url.searchParams.get('create') === 'true';
   const useWorktree = url.searchParams.get('worktree') === 'true';
   const branchName = url.searchParams.get('branch') || undefined;
+  const issueId = url.searchParams.get('issueId') || undefined;
+  const planningProjectId = url.searchParams.get('planningProjectId') || undefined;
   const sessionName = urlSessionName || generateSessionName(project || 'unknown');
+
+  // Fetch issue if issueId is provided
+  const issue = issueId ? issuesDb.getIssue(issueId) : null;
+  if (issueId && !issue) {
+    ws.close(4004, 'Issue not found');
+    return;
+  }
 
   // Validate project
   const whitelist = config.projects.whitelist as string[];
@@ -160,12 +172,38 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
       executionManager.register(sessionName, project!, worktreePath);
     }
 
+    // Generate planning prompt if this is a planning session
+    let planningPrompt: string | undefined;
+    if (planningProjectId) {
+      const planningProject = projectsDb.getProject(planningProjectId);
+      if (planningProject && planningProject.baseProject) {
+        const agentPort = config.agent?.port ?? 4678;
+        planningPrompt = generatePlanningPrompt(
+          planningProject.id,
+          planningProject.name,
+          planningProject.description ?? '',
+          `http://localhost:${agentPort}`
+        );
+        console.log(`[Terminal] Generated planning prompt for project '${planningProject.name}'`);
+      }
+    }
+
     let terminal;
     try {
-      terminal = createTerminal(terminalCwd, sessionName, envVars);
+      terminal = createTerminal(terminalCwd, sessionName, {
+        customEnvVars: envVars,
+        issuePlan: issue?.plan ?? undefined,
+        issueTitle: issue?.title,
+        planningPrompt,
+      });
       terminalRef = terminal; // Store reference for early message handler
       if (environmentId) {
         setSessionEnvironment(sessionName, environmentId);
+      }
+      // Link issue to session if provided
+      if (issue) {
+        issuesDb.linkIssueToSession(issue.id, sessionName);
+        console.log(`[Terminal] Linked issue '${issue.title}' to session '${sessionName}'`);
       }
     } catch (err) {
       console.error('Failed to create terminal:', err);
@@ -216,6 +254,7 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
           environmentId: environmentId || undefined,
           worktreePath: worktreePath || undefined,
           branchName: worktreeBranch || undefined,
+          issueId: issue?.id,
         });
         if (dbSession?.created_at) createdAt = dbSession.created_at;
       } catch (err) {

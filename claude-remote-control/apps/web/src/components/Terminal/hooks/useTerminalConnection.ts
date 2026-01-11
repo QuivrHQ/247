@@ -24,6 +24,8 @@ interface UseTerminalConnectionProps {
   sessionName: string;
   environmentId?: string;
   ralphConfig?: RalphLoopConfig;
+  /** Planning project ID - when set, the agent will inject a planning prompt for Claude */
+  planningProjectId?: string;
   onSessionCreated?: (name: string) => void;
   onCopySuccess: () => void;
   /** Mobile mode - use smaller font and handle orientation changes */
@@ -37,6 +39,7 @@ export function useTerminalConnection({
   sessionName,
   environmentId,
   ralphConfig,
+  planningProjectId,
   onSessionCreated,
   onCopySuccess,
   isMobile = false,
@@ -369,6 +372,7 @@ export function useTerminalConnection({
       if (environmentId) wsUrl += `&environment=${encodeURIComponent(environmentId)}`;
       if (isNewSession) wsUrl += '&create=true';
       if (useWorktree) wsUrl += '&worktree=true';
+      if (planningProjectId) wsUrl += `&planningProjectId=${encodeURIComponent(planningProjectId)}`;
 
       ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -692,7 +696,7 @@ export function useTerminalConnection({
     // from deps - they are refs/callbacks that shouldn't cause reconnection
     // ralphConfig is intentionally excluded - it's only used on initial connection for new sessions
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentUrl, project, sessionName, environmentId]);
+  }, [agentUrl, project, sessionName, environmentId, planningProjectId]);
 
   // Separate effect to handle isMobile changes dynamically
   // This updates font size without recreating the terminal (more efficient)

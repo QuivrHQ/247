@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.1] - 2026-01-12
+
+### Bug Fixes
+
+- **cloud-agent**: fix infinite restart loop and CI/CD build order (2364e5d)
+
 ## [2.12.0] - 2026-01-12
 
 ### Features

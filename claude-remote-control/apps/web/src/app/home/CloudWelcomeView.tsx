@@ -17,7 +17,9 @@ import {
   AgentConnectionSettings,
   type saveAgentConnection,
 } from '@/components/AgentConnectionSettings';
+import { DeployedAgentsList } from '@/components/DeployedAgentsList';
 import type { FlyioStatus } from '@/hooks/useFlyioStatus';
+import type { CloudAgent } from '@/hooks/useAgents';
 
 interface CloudWelcomeViewProps {
   user: {
@@ -32,6 +34,13 @@ interface CloudWelcomeViewProps {
   onFlyioConnected: () => void;
   onFlyioDisconnect?: () => void;
   onLaunchAgent?: () => void;
+  // Cloud agents management
+  agents?: CloudAgent[];
+  agentsLoading?: boolean;
+  onConnectAgent?: (agent: CloudAgent) => void;
+  onStartAgent?: (id: string) => Promise<boolean>;
+  onStopAgent?: (id: string) => Promise<boolean>;
+  onDeleteAgent?: (id: string) => Promise<boolean>;
 }
 
 // Animation variants
@@ -64,6 +73,12 @@ export function CloudWelcomeView({
   onFlyioConnected,
   onFlyioDisconnect,
   onLaunchAgent,
+  agents = [],
+  agentsLoading,
+  onConnectAgent,
+  onStartAgent,
+  onStopAgent,
+  onDeleteAgent,
 }: CloudWelcomeViewProps) {
   const [flyioModalOpen, setFlyioModalOpen] = useState(false);
   const [localModalOpen, setLocalModalOpen] = useState(false);
@@ -269,6 +284,18 @@ export function CloudWelcomeView({
               </div>
             )}
           </motion.div>
+
+          {/* Deployed Agents List */}
+          {isConnected && onConnectAgent && onStartAgent && onStopAgent && onDeleteAgent && (
+            <DeployedAgentsList
+              agents={agents}
+              isLoading={agentsLoading}
+              onConnect={onConnectAgent}
+              onStart={onStartAgent}
+              onStop={onStopAgent}
+              onDelete={onDeleteAgent}
+            />
+          )}
 
           {/* Alternative - Local Agent */}
           <motion.div variants={itemVariants} className="mt-6 text-center">

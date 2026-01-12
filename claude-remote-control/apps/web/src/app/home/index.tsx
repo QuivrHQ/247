@@ -22,6 +22,7 @@ import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
 import { useFlyioStatus } from '@/hooks/useFlyioStatus';
+import { useAgents, type CloudAgent } from '@/hooks/useAgents';
 
 // Check if cloud auth is enabled
 const isCloudEnabled = !!process.env.NEXT_PUBLIC_PROVISIONING_URL;
@@ -52,6 +53,16 @@ export function HomeContent() {
     isLoading: flyioLoading,
     refresh: refreshFlyioStatus,
   } = useFlyioStatus(auth.isAuthenticated);
+
+  // Fetch deployed cloud agents when authenticated
+  const {
+    agents,
+    isLoading: agentsLoading,
+    refresh: refreshAgents,
+    startAgent,
+    stopAgent,
+    deleteAgent,
+  } = useAgents(auth.isAuthenticated);
 
   // Set CSS variable for viewport height (handles mobile keyboard)
   useViewportHeight();
@@ -122,8 +133,19 @@ export function HomeContent() {
 
   // Handler for successful agent deployment - auto-connect to the new agent
   const handleDeploySuccess = (agent: DeployedAgent) => {
+    // Refresh the agents list to show the new agent
+    refreshAgents();
     // Save the agent as a connection and connect to it
     // Use 'custom' method since it's a cloud-hosted agent via Fly.io
+    handleConnectionSaved({
+      url: `wss://${agent.hostname}`,
+      name: `Cloud Agent (${agent.region})`,
+      method: 'custom',
+    });
+  };
+
+  // Handler for connecting to an existing cloud agent
+  const handleConnectAgent = (agent: CloudAgent) => {
     handleConnectionSaved({
       url: `wss://${agent.hostname}`,
       name: `Cloud Agent (${agent.region})`,
@@ -149,6 +171,12 @@ export function HomeContent() {
           onFlyioConnected={refreshFlyioStatus}
           onFlyioDisconnect={handleFlyioDisconnect}
           onLaunchAgent={handleLaunchAgent}
+          agents={agents}
+          agentsLoading={agentsLoading}
+          onConnectAgent={handleConnectAgent}
+          onStartAgent={startAgent}
+          onStopAgent={stopAgent}
+          onDeleteAgent={deleteAgent}
         />
         <DeployAgentModal
           open={deployModalOpen}

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-01-12
+
+### Features
+
+- **cloud-agent**: add deployment step for 247-agent and update Dockerfile to copy standalone agent (4d72608)
+- **cloud-agent**: rename user to quivr and use port 4678 (7c4b262)
+
+### Bug Fixes
+
+- **agent**: add missing .js extension to init-script import (30a10d2)
+- **cloud-agent**: copy dist folder from builder stage to include compiled code (d23ec24)
+- **provisioning**: use correct ghcr.io org for cloud-agent image (83ae0e7)
+- **cloud-agent**: fix Dockerfile build issues (a36e06f)
+- **cloud-agent**: copy root tsconfig.json for shared package build (55512b4)
+- **cloud-agent**: build shared package before agent in Dockerfile (ee2bc88)
+- **cloud-agent**: handle existing ubuntu user in Ubuntu 24.04 (c9dc41b)
+- **cloud-agent**: correct config.cloud.json path in Dockerfile (5baa233)
+- **ci**: correct Docker build context path for cloud-agent workflow (6accfcf)
+
 ## [2.8.1] - 2026-01-12
 
 ### Bug Fixes

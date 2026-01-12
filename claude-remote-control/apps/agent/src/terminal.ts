@@ -6,7 +6,7 @@ import {
   writeInitScript,
   cleanupInitScript,
   detectUserShell,
-} from './lib/init-script';
+} from './lib/init-script.js';
 import * as path from 'path';
 
 const execAsync = promisify(exec);

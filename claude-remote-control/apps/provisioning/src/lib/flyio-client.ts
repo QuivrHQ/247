@@ -98,6 +98,123 @@ export async function getOrganizations(token: string): Promise<FlyOrganization[]
 }
 
 // =============================================================================
+// IP Address Allocation (GraphQL API)
+// The Machines REST API doesn't support IP allocation, so we use GraphQL
+// =============================================================================
+
+/**
+ * Allocate a shared IPv4 address for the app via GraphQL API
+ * Required for public internet access when using Machines API
+ */
+export async function allocateSharedIPv4(
+  token: string,
+  appName: string
+): Promise<{ success: boolean; error?: string }> {
+  const mutation = `
+    mutation ($input: AllocateIPAddressInput!) {
+      allocateIpAddress(input: $input) {
+        app { sharedIpAddress }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(FLYIO_GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        query: mutation,
+        variables: { input: { appId: appName, type: 'shared_v4' } },
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const data = (await response.json()) as {
+      data?: unknown;
+      errors?: Array<{ message: string }>;
+    };
+
+    if (data.errors && data.errors.length > 0) {
+      const error = data.errors[0].message;
+      // Ignore "already allocated" errors
+      if (error.includes('already') || error.includes('exists')) {
+        logger.info({ appName }, 'Shared IPv4 already allocated');
+        return { success: true };
+      }
+      return { success: false, error };
+    }
+
+    logger.info({ appName }, 'Shared IPv4 allocated successfully');
+    return { success: true };
+  } catch (error) {
+    logger.error({ error, appName }, 'Failed to allocate shared IPv4');
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Allocate a dedicated IPv6 address for the app via GraphQL API
+ * Required for public internet access when using Machines API
+ */
+export async function allocateIPv6(
+  token: string,
+  appName: string
+): Promise<{ success: boolean; error?: string }> {
+  const mutation = `
+    mutation ($input: AllocateIPAddressInput!) {
+      allocateIpAddress(input: $input) {
+        ipAddress { address type }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(FLYIO_GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        query: mutation,
+        variables: { input: { appId: appName, type: 'v6' } },
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const data = (await response.json()) as {
+      data?: unknown;
+      errors?: Array<{ message: string }>;
+    };
+
+    if (data.errors && data.errors.length > 0) {
+      const error = data.errors[0].message;
+      // Ignore "already allocated" errors
+      if (error.includes('already') || error.includes('exists')) {
+        logger.info({ appName }, 'IPv6 already allocated');
+        return { success: true };
+      }
+      return { success: false, error };
+    }
+
+    logger.info({ appName }, 'IPv6 allocated successfully');
+    return { success: true };
+  } catch (error) {
+    logger.error({ error, appName }, 'Failed to allocate IPv6');
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// =============================================================================
 // Fly.io Machines REST API
 // =============================================================================
 

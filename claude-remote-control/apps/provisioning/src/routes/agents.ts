@@ -17,6 +17,8 @@ import {
   deleteVolume,
   deleteApp,
   waitForMachineState,
+  allocateSharedIPv4,
+  allocateIPv6,
   type FlyMachineConfig,
 } from '../lib/flyio-client.js';
 import { logger } from '../lib/logger.js';
@@ -128,6 +130,21 @@ agentsRoutes.post('/', async (c) => {
     const appResult = await createApp(token, appName, orgSlug);
     if (!appResult.success) {
       throw new Error(`Failed to create app: ${appResult.error}`);
+    }
+
+    // Step 1.5: Allocate public IPs for the app (required for internet access)
+    await db.update(agents).set({ status: 'allocating_ips' }).where(eq(agents.id, agentId));
+
+    const [ipv4Result, ipv6Result] = await Promise.all([
+      allocateSharedIPv4(token, appName),
+      allocateIPv6(token, appName),
+    ]);
+
+    if (!ipv4Result.success) {
+      logger.warn({ appName, error: ipv4Result.error }, 'Failed to allocate IPv4, continuing...');
+    }
+    if (!ipv6Result.success) {
+      logger.warn({ appName, error: ipv6Result.error }, 'Failed to allocate IPv6, continuing...');
     }
 
     // Step 2: Create volume for persistent storage

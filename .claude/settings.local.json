@@ -287,7 +287,21 @@
       "Bash(pnpm --filter 247-cli bundle:*)",
       "Bash(npm link)",
       "Bash(gh workflow run:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(timeout 3 node:*)",
+      "Bash(fly machines destroy:*)",
+      "Bash(fly machines start:*)",
+      "Bash(fly machines show:*)",
+      "Bash(fly machine show:*)",
+      "Bash(fly machine status:*)",
+      "Bash(gh workflow list:*)",
+      "Bash(gh workflow view:*)",
+      "Bash(fly ips list:*)",
+      "Bash(gh run watch:*)",
+      "Bash(fly machine stop:*)",
+      "Bash(fly machine destroy:*)",
+      "Bash(dscacheutil:*)",
+      "WebFetch(domain:community.fly.io)"
     ]
   },
   "remote": {

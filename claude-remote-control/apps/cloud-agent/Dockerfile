@@ -56,13 +56,13 @@ RUN for i in 1 2 3; do \
     && rm -rf /var/lib/apt/lists/* \
     && locale-gen en_US.UTF-8
 
-# Create user 'ariana' with sudo privileges (after sudo is installed)
+# Create user 'quivr' with sudo privileges (after sudo is installed)
 # Delete ubuntu user if exists (Ubuntu 24.04 has a default ubuntu user with UID 1000)
 RUN userdel -r ubuntu 2>/dev/null || true && \
-    useradd -m -s /bin/bash -u 1000 ariana && \
-    echo 'ariana ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    mkdir -p /home/ariana/.local/bin && \
-    chown -R ariana:ariana /home/ariana
+    useradd -m -s /bin/bash -u 1000 quivr && \
+    echo 'quivr ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    mkdir -p /home/quivr/.local/bin && \
+    chown -R quivr:quivr /home/quivr
 
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
@@ -85,17 +85,17 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 RUN wget -q https://go.dev/dl/go1.23.4.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz && \
     rm go1.23.4.linux-amd64.tar.gz
-ENV PATH=$PATH:/usr/local/go/bin:/home/ariana/go/bin
+ENV PATH=$PATH:/usr/local/go/bin:/home/quivr/go/bin
 
-# Rust (as ariana user)
-USER ariana
+# Rust (as quivr user)
+USER quivr
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 USER root
-ENV PATH=$PATH:/home/ariana/.cargo/bin
+ENV PATH=$PATH:/home/quivr/.cargo/bin
 
 # Docker CLI (no daemon - for building images)
 RUN curl -fsSL https://get.docker.com | sh && \
-    usermod -aG docker ariana
+    usermod -aG docker quivr
 
 # GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -111,15 +111,15 @@ RUN npm install -g @anthropic-ai/claude-code
 
 # Bun
 RUN curl -fsSL https://bun.sh/install | bash && \
-    mv /root/.bun /home/ariana/.bun && \
-    chown -R ariana:ariana /home/ariana/.bun
-ENV PATH=$PATH:/home/ariana/.bun/bin
+    mv /root/.bun /home/quivr/.bun && \
+    chown -R quivr:quivr /home/quivr/.bun
+ENV PATH=$PATH:/home/quivr/.bun/bin
 
 # Deno
-USER ariana
+USER quivr
 RUN curl -fsSL https://deno.land/install.sh | sh
 USER root
-ENV PATH=$PATH:/home/ariana/.deno/bin
+ENV PATH=$PATH:/home/quivr/.deno/bin
 
 # Java 11 + Maven + Gradle
 RUN for i in 1 2 3; do apt-get update && break || sleep 15; done && \
@@ -155,33 +155,33 @@ COPY --from=builder /build/apps/agent/node_modules ./node_modules
 COPY --from=builder /build/apps/agent/package.json ./
 
 # Create agent config directory
-RUN mkdir -p /home/ariana/.247/data && \
-    chown -R ariana:ariana /home/ariana/.247
+RUN mkdir -p /home/quivr/.247/data && \
+    chown -R quivr:quivr /home/quivr/.247
 
 # Copy cloud-specific config
-COPY apps/cloud-agent/config.cloud.json /home/ariana/.247/config.json
-RUN chown ariana:ariana /home/ariana/.247/config.json
+COPY apps/cloud-agent/config.cloud.json /home/quivr/.247/config.json
+RUN chown quivr:quivr /home/quivr/.247/config.json
 
 # =============================================================================
 # Setup workspace and environment
 # =============================================================================
-RUN mkdir -p /workspace && chown ariana:ariana /workspace
+RUN mkdir -p /workspace && chown quivr:quivr /workspace
 WORKDIR /workspace
 
 # Set environment
-ENV HOME=/home/ariana
-ENV USER=ariana
+ENV HOME=/home/quivr
+ENV USER=quivr
 ENV NODE_ENV=production
 
 # Expose agent WebSocket port
-EXPOSE 8911
+EXPOSE 4678
 
-# Run as ariana user
-USER ariana
+# Run as quivr user
+USER quivr
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8911/health || exit 1
+    CMD curl -f http://localhost:4678/health || exit 1
 
 # Start the agent
 CMD ["node", "/opt/247-agent/dist/index.js"]

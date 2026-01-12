@@ -158,7 +158,7 @@ agentsRoutes.post('/', async (c) => {
       services: [
         {
           protocol: 'tcp',
-          internal_port: 8911,
+          internal_port: 4678,
           ports: [
             { port: 443, handlers: ['tls', 'http'] },
             { port: 80, handlers: ['http'] },

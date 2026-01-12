@@ -4,7 +4,7 @@
     "name": "Cloud Agent"
   },
   "agent": {
-    "port": 8911
+    "port": 4678
   },
   "projects": {
     "basePath": "/workspace",

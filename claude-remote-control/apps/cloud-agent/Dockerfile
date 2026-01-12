@@ -146,7 +146,7 @@ RUN mkdir -p /home/ariana/.247/data && \
     chown -R ariana:ariana /home/ariana/.247
 
 # Copy cloud-specific config
-COPY config.cloud.json /home/ariana/.247/config.json
+COPY apps/cloud-agent/config.cloud.json /home/ariana/.247/config.json
 RUN chown ariana:ariana /home/ariana/.247/config.json
 
 # =============================================================================

@@ -163,10 +163,20 @@ agentsRoutes.post('/', async (c) => {
             { port: 443, handlers: ['tls', 'http'] },
             { port: 80, handlers: ['http'] },
           ],
-          autostop: 'stop',
+          autostop: 'off',
           autostart: true,
         },
       ],
+      checks: {
+        health: {
+          type: 'http',
+          port: 4678,
+          path: '/health',
+          interval: '30s',
+          timeout: '10s',
+          grace_period: '30s',
+        },
+      },
       mounts: volumeResult.volume
         ? [
             {

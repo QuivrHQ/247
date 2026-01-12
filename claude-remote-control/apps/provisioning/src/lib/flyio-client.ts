@@ -133,6 +133,15 @@ export interface FlyMachineService {
   autostart?: boolean;
 }
 
+export interface FlyMachineCheck {
+  type: 'http' | 'tcp';
+  port?: number;
+  path?: string;
+  interval?: string;
+  timeout?: string;
+  grace_period?: string;
+}
+
 export interface FlyMachineConfig {
   image: string;
   env?: Record<string, string>;
@@ -150,6 +159,7 @@ export interface FlyMachineConfig {
     policy?: 'no' | 'on-failure' | 'always';
   };
   auto_destroy?: boolean;
+  checks?: Record<string, FlyMachineCheck>;
 }
 
 export interface FlyMachine {

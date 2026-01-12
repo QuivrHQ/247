@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProjectDropdownProps {
@@ -21,6 +21,23 @@ export function ProjectDropdown({
   accentColor = 'orange',
 }: ProjectDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus search input when dropdown opens, reset search when closed
+  useEffect(() => {
+    if (open && inputRef.current) {
+      inputRef.current.focus();
+    }
+    if (!open) {
+      setSearchQuery('');
+    }
+  }, [open]);
+
+  // Filter folders based on search query
+  const filteredFolders = folders.filter((folder) =>
+    folder.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const selectedClass =
     accentColor === 'purple'
@@ -58,35 +75,59 @@ export function ProjectDropdown({
               'absolute left-0 right-0 top-full z-10 mt-2',
               'rounded-xl border border-white/10 bg-[#12121a]',
               'shadow-xl shadow-black/50',
-              'max-h-48 overflow-y-auto'
+              'flex max-h-64 flex-col overflow-hidden'
             )}
           >
-            {loading ? (
-              <div className="flex items-center gap-2 px-4 py-3 text-sm text-white/30">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading folders...
-              </div>
-            ) : folders.length > 0 ? (
-              folders.map((folder) => (
-                <button
-                  key={folder}
-                  onClick={() => {
-                    onSelectProject(folder);
-                    setOpen(false);
-                  }}
+            {/* Search input */}
+            <div className="flex-shrink-0 border-b border-white/10 p-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search projects..."
                   className={cn(
-                    'w-full px-4 py-2.5 text-left',
-                    'transition-colors hover:bg-white/5',
-                    'first:rounded-t-xl last:rounded-b-xl',
-                    selectedProject === folder ? selectedClass : 'text-white/80'
+                    'w-full rounded-lg py-2 pl-9 pr-3 text-sm',
+                    'border border-white/10 bg-white/5',
+                    'text-white placeholder:text-white/30',
+                    'focus:border-white/20 focus:outline-none'
                   )}
-                >
-                  {folder}
-                </button>
-              ))
-            ) : (
-              <div className="px-4 py-3 text-sm text-white/30">No folders found</div>
-            )}
+                />
+              </div>
+            </div>
+
+            {/* Folders list */}
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center gap-2 px-4 py-3 text-sm text-white/30">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading folders...
+                </div>
+              ) : filteredFolders.length > 0 ? (
+                filteredFolders.map((folder) => (
+                  <button
+                    key={folder}
+                    onClick={() => {
+                      onSelectProject(folder);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      'w-full px-4 py-2.5 text-left',
+                      'transition-colors hover:bg-white/5',
+                      selectedProject === folder ? selectedClass : 'text-white/80'
+                    )}
+                  >
+                    {folder}
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-white/30">
+                  {folders.length > 0 ? 'No matching projects' : 'No folders found'}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

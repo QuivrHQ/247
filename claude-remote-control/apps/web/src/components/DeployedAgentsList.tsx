@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Server, Play, Square, Trash2, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import { Server, Play, Trash2, Loader2, AlertCircle, ExternalLink, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CloudAgent } from '@/hooks/useAgents';
 
@@ -50,15 +50,15 @@ const statusConfig: Record<
     canConnect: true,
   },
   stopped: {
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/20',
-    label: 'Stopped',
-    canConnect: false,
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/20',
+    label: 'Sleeping',
+    canConnect: true, // Fly.io auto-starts on connect
   },
   starting: {
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/20',
-    label: 'Starting...',
+    label: 'Waking up...',
     canConnect: false,
   },
   stopping: {
@@ -207,26 +207,40 @@ export function DeployedAgentsList({
                         {config.canConnect && (
                           <button
                             onClick={() => onConnect(agent)}
-                            className="flex items-center gap-1.5 rounded-lg bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/30"
+                            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                              agent.status === 'stopped'
+                                ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                                : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            }`}
                           >
-                            <ExternalLink className="h-3 w-3" />
-                            Connect
+                            {agent.status === 'stopped' ? (
+                              <>
+                                <Moon className="h-3 w-3" />
+                                Wake & Connect
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="h-3 w-3" />
+                                Connect
+                              </>
+                            )}
                           </button>
                         )}
 
-                        {/* Start/Stop Button */}
+                        {/* Wake/Stop Button */}
                         {agent.status === 'stopped' && (
                           <button
                             onClick={() => handleAction(agent.id, 'start', () => onStart(agent.id))}
                             disabled={isLoading}
                             className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-white/60 transition-colors hover:bg-white/10 disabled:opacity-50"
+                            title="Wake the agent without connecting"
                           >
                             {loadingActions[agent.id] === 'start' ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
                               <Play className="h-3 w-3" />
                             )}
-                            Start
+                            Wake
                           </button>
                         )}
                         {agent.status === 'running' && (
@@ -234,13 +248,14 @@ export function DeployedAgentsList({
                             onClick={() => handleAction(agent.id, 'stop', () => onStop(agent.id))}
                             disabled={isLoading}
                             className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs text-white/60 transition-colors hover:bg-white/10 disabled:opacity-50"
+                            title="Put agent to sleep (auto-wakes on connect)"
                           >
                             {loadingActions[agent.id] === 'stop' ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              <Square className="h-3 w-3" />
+                              <Moon className="h-3 w-3" />
                             )}
-                            Stop
+                            Sleep
                           </button>
                         )}
 

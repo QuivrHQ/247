@@ -194,7 +194,7 @@ agentsRoutes.post('/', async (c) => {
             { port: 443, handlers: ['tls', 'http'] },
             { port: 80, handlers: ['http'] },
           ],
-          autostop: 'off',
+          autostop: 'stop',
           autostart: true,
         },
       ],

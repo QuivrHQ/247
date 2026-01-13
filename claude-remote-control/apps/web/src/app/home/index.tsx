@@ -149,7 +149,16 @@ export function HomeContent() {
   };
 
   // Handler for connecting to an existing cloud agent
-  const handleConnectAgent = (agent: CloudAgent) => {
+  // If the agent is sleeping (stopped), trigger a wake first via API
+  // This is faster than waiting for Fly.io proxy auto-wake
+  const handleConnectAgent = async (agent: CloudAgent) => {
+    // If agent is stopped/sleeping, trigger wake via API (don't wait for it)
+    if (agent.status === 'stopped') {
+      startAgent(agent.id).catch(() => {
+        // Ignore errors - Fly.io proxy will auto-wake anyway
+      });
+    }
+    // Save connection immediately - WebSocket will retry if machine isn't ready yet
     handleConnectionSaved({
       url: `wss://${agent.hostname}`,
       name: `Cloud Agent (${agent.region})`,

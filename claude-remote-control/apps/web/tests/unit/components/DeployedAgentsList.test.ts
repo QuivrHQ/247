@@ -8,6 +8,9 @@ import { describe, it, expect } from 'vitest';
 import type { CloudAgent } from '@/hooks/useAgents';
 
 // Status configuration that mirrors the component
+// Updated for auto-sleep/auto-wake feature:
+// - stopped -> "Sleeping" with purple color, canConnect: true (Fly.io auto-wakes)
+// - starting -> "Waking up..."
 const statusConfig: Record<
   CloudAgent['status'],
   { color: string; bgColor: string; label: string; canConnect: boolean }
@@ -43,15 +46,15 @@ const statusConfig: Record<
     canConnect: true,
   },
   stopped: {
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/20',
-    label: 'Stopped',
-    canConnect: false,
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/20',
+    label: 'Sleeping',
+    canConnect: true, // Fly.io auto-starts on connect
   },
   starting: {
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/20',
-    label: 'Starting...',
+    label: 'Waking up...',
     canConnect: false,
   },
   stopping: {
@@ -87,8 +90,8 @@ describe('DeployedAgentsList', () => {
       expect(statusConfig.running.canConnect).toBe(true);
     });
 
-    it('stopped status does not allow connection', () => {
-      expect(statusConfig.stopped.canConnect).toBe(false);
+    it('sleeping (stopped) status allows connection (Fly.io auto-wakes)', () => {
+      expect(statusConfig.stopped.canConnect).toBe(true);
     });
 
     it('error status does not allow connection', () => {
@@ -114,9 +117,9 @@ describe('DeployedAgentsList', () => {
       expect(statusConfig.running.bgColor).toContain('green');
     });
 
-    it('stopped status uses gray color', () => {
-      expect(statusConfig.stopped.color).toContain('gray');
-      expect(statusConfig.stopped.bgColor).toContain('gray');
+    it('sleeping (stopped) status uses purple color', () => {
+      expect(statusConfig.stopped.color).toContain('purple');
+      expect(statusConfig.stopped.bgColor).toContain('purple');
     });
 
     it('error status uses red color', () => {
@@ -145,8 +148,8 @@ describe('DeployedAgentsList', () => {
       expect(statusConfig.running.label).toBe('Running');
     });
 
-    it('stopped shows "Stopped"', () => {
-      expect(statusConfig.stopped.label).toBe('Stopped');
+    it('stopped shows "Sleeping"', () => {
+      expect(statusConfig.stopped.label).toBe('Sleeping');
     });
 
     it('error shows "Error"', () => {
@@ -163,8 +166,8 @@ describe('DeployedAgentsList', () => {
       expect(statusConfig.creating_machine.label).toBe('Creating...');
     });
 
-    it('starting shows "Starting..."', () => {
-      expect(statusConfig.starting.label).toBe('Starting...');
+    it('starting shows "Waking up..."', () => {
+      expect(statusConfig.starting.label).toBe('Waking up...');
     });
 
     it('stopping shows "Stopping..."', () => {
@@ -243,11 +246,11 @@ describe('DeployedAgentsList', () => {
       expect(actions).not.toContain('start');
     });
 
-    it('stopped agent shows start, delete', () => {
+    it('sleeping (stopped) agent shows connect (Wake & Connect), wake, delete', () => {
       const actions = getVisibleActions('stopped');
-      expect(actions).toContain('start');
+      expect(actions).toContain('connect'); // "Wake & Connect" button
+      expect(actions).toContain('start'); // "Wake" button (manual wake without connect)
       expect(actions).toContain('delete');
-      expect(actions).not.toContain('connect');
       expect(actions).not.toContain('stop');
     });
 

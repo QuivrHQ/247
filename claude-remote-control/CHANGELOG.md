@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.19.0] - 2026-01-13
+
+### Features
+
+- **mcp-server**: move to standalone npm package (0c1d4e8)
+- **plugin**: add 247-orchestrator plugin for multi-agent orchestration (8d509d7)
+
+### Bug Fixes
+
+- add compiled MCP server and fix TypeScript error (50dd4f2)
+- remove hooks from plugin.json manifest (auto-discovered) (ae6ff1a)
+- remove agents field from plugin.json (unsupported format) (af396f4)
+- correct marketplace.json schema for Claude Code (f6a0525)
+- move marketplace.json to .claude-plugin/ folder (3338829)
+- move marketplace.json to root and fix repo URLs (999d7c8)
+
+### Documentation
+
+- add multi-agent orchestration plugin section to README (2743a3b)
+- add multi-agent orchestration plugin section to README (61d00a2)
+
+### Chores
+
+- include MCP server dist/ in repository (b517a70)
+
 ## [2.18.3] - 2026-01-13
 
 ### Bug Fixes

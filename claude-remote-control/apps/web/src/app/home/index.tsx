@@ -6,6 +6,7 @@ import { HomeSidebar } from '@/components/HomeSidebar';
 import { SessionView } from '@/components/SessionView';
 import { NewSessionModal } from '@/components/NewSessionModal';
 import { AgentConnectionSettings } from '@/components/AgentConnectionSettings';
+import { UnifiedAgentManager } from '@/components/UnifiedAgentManager';
 import { MobileStatusStrip } from '@/components/mobile';
 import { InstallBanner } from '@/components/InstallBanner';
 import { SlideOverPanel } from '@/components/ui/SlideOverPanel';
@@ -14,10 +15,10 @@ import { EnvironmentsList } from '@/components/EnvironmentsList';
 import { DeployAgentModal, type DeployedAgent } from '@/components/DeployAgentModal';
 import { CloudConfigPanel } from '@/components/CloudConfigPanel';
 import { FlyioLinkModal } from '@/components/FlyioLinkModal';
+import { MultiAgentHeader, type ConnectedAgent } from '@/components/MultiAgentHeader';
 import { LoadingView } from './LoadingView';
 import { NoConnectionView } from './NoConnectionView';
 import { CloudWelcomeView } from './CloudWelcomeView';
-import { Header } from './Header';
 import { useHomeState } from './useHomeState';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
@@ -72,6 +73,7 @@ export function HomeContent() {
   const {
     loading,
     agentConnection,
+    agentConnections,
     connectionModalOpen,
     setConnectionModalOpen,
     newSessionOpen,
@@ -83,6 +85,7 @@ export function HomeContent() {
     allSessions,
     needsAttention,
     currentMachine,
+    machines,
     getArchivedSessions,
     getAgentUrl,
     getSelectedSessionInfo,
@@ -92,15 +95,47 @@ export function HomeContent() {
     handleSessionKilled,
     handleSessionArchived,
     handleConnectionSaved,
+    handleConnectionRemoved,
     handleConnectionCleared,
     clearSessionFromUrl,
   } = useHomeState();
+
+  // Get session count per agent for the header
+  const { sessionsByMachine, isWsConnected } = useSessionPolling();
+
+  // Convert agentConnections to ConnectedAgent format for the header
+  const connectedAgents: ConnectedAgent[] = agentConnections.map((conn) => {
+    const machineData = sessionsByMachine.get(conn.id);
+    const wsConnected = isWsConnected(conn.id);
+    return {
+      id: conn.id,
+      name: conn.name,
+      url: conn.url,
+      method: conn.method,
+      status: machineData?.error ? 'offline' : wsConnected ? 'online' : 'connecting',
+      sessionCount: machineData?.sessions?.length ?? 0,
+    };
+  });
 
   // Slide-over panel states
   const [guideOpen, setGuideOpen] = useState(false);
   const [environmentsOpen, setEnvironmentsOpen] = useState(false);
   const [cloudConfigOpen, setCloudConfigOpen] = useState(false);
   const [flyioLinkModalOpen, setFlyioLinkModalOpen] = useState(false);
+  const [unifiedManagerOpen, setUnifiedManagerOpen] = useState(false);
+
+  // Create agent status and session count maps for UnifiedAgentManager
+  const agentStatuses = new Map<string, 'online' | 'offline' | 'connecting'>();
+  const sessionCountsMap = new Map<string, number>();
+  agentConnections.forEach((conn) => {
+    const machineData = sessionsByMachine.get(conn.id);
+    const wsConnected = isWsConnected(conn.id);
+    agentStatuses.set(
+      conn.id,
+      machineData?.error ? 'offline' : wsConnected ? 'online' : 'connecting'
+    );
+    sessionCountsMap.set(conn.id, machineData?.sessions?.length ?? 0);
+  });
 
   // Pull-to-refresh for mobile PWA
   const { refreshMachine } = useSessionPolling();
@@ -270,27 +305,26 @@ export function HomeContent() {
           onNewSession={() => setNewSessionOpen(true)}
           onOpenGuide={() => setGuideOpen(true)}
           onOpenEnvironments={() => setEnvironmentsOpen(true)}
-          onConnectionSettingsClick={() => setConnectionModalOpen(true)}
+          onConnectionSettingsClick={() => setUnifiedManagerOpen(true)}
           onSessionKilled={handleSessionKilled}
         />
       )}
 
       {/* Header - always visible on desktop */}
       {!isMobile && (
-        <Header
-          agentUrl={agentConnection.url}
-          sessionCount={allSessions.length}
+        <MultiAgentHeader
+          agents={connectedAgents}
+          totalSessionCount={allSessions.length}
           needsAttention={needsAttention}
-          selectedSession={selectedSession}
-          isFullscreen={isFullscreen}
-          onConnectionSettingsClick={() => setConnectionModalOpen(true)}
-          onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+          onAddAgent={() => setUnifiedManagerOpen(true)}
+          onDisconnectAgent={handleConnectionRemoved}
           onNewSession={() => setNewSessionOpen(true)}
           onOpenGuide={() => setGuideOpen(true)}
           onOpenEnvironments={() => setEnvironmentsOpen(true)}
           onOpenCloudConfig={isCloudEnabled ? () => setCloudConfigOpen(true) : undefined}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
           isMobile={false}
-          onMobileMenuClick={() => {}}
         />
       )}
 
@@ -339,7 +373,7 @@ export function HomeContent() {
         </div>
       </div>
 
-      {/* Connection Settings Modal */}
+      {/* Connection Settings Modal (legacy fallback) */}
       <AgentConnectionSettings
         open={connectionModalOpen}
         onOpenChange={setConnectionModalOpen}
@@ -348,11 +382,37 @@ export function HomeContent() {
         hasConnection={!!agentConnection}
       />
 
+      {/* Unified Agent Manager */}
+      <UnifiedAgentManager
+        open={unifiedManagerOpen}
+        onClose={() => setUnifiedManagerOpen(false)}
+        connectedAgents={agentConnections}
+        agentStatuses={agentStatuses}
+        sessionCounts={sessionCountsMap}
+        onDisconnectAgent={handleConnectionRemoved}
+        onConnectNewAgent={handleConnectionSaved}
+        isAuthenticated={auth.isAuthenticated}
+        flyioStatus={flyioStatus}
+        flyioLoading={flyioLoading}
+        cloudAgents={agents}
+        cloudAgentsLoading={agentsLoading}
+        onSignIn={isCloudEnabled ? auth.signInWithGitHub : undefined}
+        onFlyioConnect={() => setFlyioLinkModalOpen(true)}
+        onFlyioDisconnect={handleFlyioDisconnect}
+        onLaunchCloudAgent={() => {
+          setUnifiedManagerOpen(false);
+          setDeployModalOpen(true);
+        }}
+        onStartCloudAgent={startAgent}
+        onStopCloudAgent={stopAgent}
+        onDeleteCloudAgent={deleteAgent}
+      />
+
       {/* New Session Modal */}
       <NewSessionModal
         open={newSessionOpen}
         onOpenChange={setNewSessionOpen}
-        machines={currentMachine ? [currentMachine] : []}
+        machines={machines}
         onStartSession={handleStartSession}
       />
 
@@ -367,7 +427,7 @@ export function HomeContent() {
         onClose={() => setEnvironmentsOpen(false)}
         title="Environments"
       >
-        <EnvironmentsList machines={currentMachine ? [currentMachine] : []} />
+        <EnvironmentsList machines={machines} />
       </SlideOverPanel>
 
       {/* Cloud Config Slide-Over Panel */}

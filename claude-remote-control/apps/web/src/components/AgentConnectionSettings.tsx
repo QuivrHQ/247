@@ -19,31 +19,171 @@ import {
 } from 'lucide-react';
 import { cn, buildWebSocketUrl, stripProtocol } from '@/lib/utils';
 
-const STORAGE_KEY = 'agentConnection';
+// Old storage key (for migration)
+const OLD_STORAGE_KEY = 'agentConnection';
+// New storage key for multiple connections
+const STORAGE_KEY = 'agentConnections';
 
+// Legacy single connection type (kept for migration, now extended for cloud)
 export interface AgentConnection {
   url: string;
   name?: string;
-  method: 'localhost' | 'tailscale' | 'custom';
+  method: 'localhost' | 'tailscale' | 'custom' | 'cloud';
+  isCloud?: boolean;
+  cloudAgentId?: string;
 }
 
-export function loadAgentConnection(): AgentConnection | null {
-  if (typeof window === 'undefined') return null;
+// New type with unique ID for multi-agent support
+export interface StoredAgentConnection {
+  id: string;
+  url: string;
+  name: string;
+  method: 'localhost' | 'tailscale' | 'custom' | 'cloud';
+  createdAt: number;
+  isCloud?: boolean;
+  cloudAgentId?: string;
+}
+
+// Generate a unique ID for connections
+function generateConnectionId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return `conn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Migrate from old single-connection format to new array format
+export function migrateStorageIfNeeded(): void {
+  if (typeof window === 'undefined') return;
+
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
+    const oldConnection = localStorage.getItem(OLD_STORAGE_KEY);
+    const newConnections = localStorage.getItem(STORAGE_KEY);
+
+    // Only migrate if old format exists and new format doesn't
+    if (oldConnection && !newConnections) {
+      const old = JSON.parse(oldConnection) as AgentConnection;
+      const migrated: StoredAgentConnection = {
+        id: generateConnectionId(),
+        url: old.url,
+        name: old.name || 'Local Agent',
+        method: old.method,
+        createdAt: Date.now(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([migrated]));
+      localStorage.removeItem(OLD_STORAGE_KEY);
+      // Migration complete - single agent connection converted to multi-agent format
+    }
+  } catch (err) {
+    console.error('[Migration] Failed to migrate agent connections:', err);
   }
 }
 
+// Load all agent connections
+export function loadAgentConnections(): StoredAgentConnection[] {
+  if (typeof window === 'undefined') return [];
+
+  // Run migration on first load
+  migrateStorageIfNeeded();
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Add a new agent connection
+export function addAgentConnection(
+  connection: Omit<StoredAgentConnection, 'id' | 'createdAt'>
+): StoredAgentConnection {
+  const connections = loadAgentConnections();
+
+  // Check for duplicate URLs
+  const existingIndex = connections.findIndex(
+    (c) => c.url.toLowerCase() === connection.url.toLowerCase()
+  );
+
+  const newConnection: StoredAgentConnection = {
+    ...connection,
+    id: generateConnectionId(),
+    createdAt: Date.now(),
+  };
+
+  if (existingIndex >= 0) {
+    // Update existing connection with same URL
+    connections[existingIndex] = {
+      ...newConnection,
+      id: connections[existingIndex].id, // Keep existing ID
+      createdAt: connections[existingIndex].createdAt, // Keep original timestamp
+    };
+  } else {
+    // Add new connection
+    connections.push(newConnection);
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(connections));
+  return existingIndex >= 0 ? connections[existingIndex] : newConnection;
+}
+
+// Remove an agent connection by ID
+export function removeAgentConnection(id: string): void {
+  const connections = loadAgentConnections();
+  const filtered = connections.filter((c) => c.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+}
+
+// Update an existing agent connection
+export function updateAgentConnection(
+  id: string,
+  updates: Partial<Omit<StoredAgentConnection, 'id' | 'createdAt'>>
+): void {
+  const connections = loadAgentConnections();
+  const index = connections.findIndex((c) => c.id === id);
+
+  if (index >= 0) {
+    connections[index] = { ...connections[index], ...updates };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(connections));
+  }
+}
+
+// Clear all agent connections
+export function clearAllAgentConnections(): void {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// Legacy function for backward compatibility
+export function loadAgentConnection(): AgentConnection | null {
+  const connections = loadAgentConnections();
+  if (connections.length === 0) return null;
+  // Return the first connection for legacy compatibility
+  const first = connections[0];
+  return {
+    url: first.url,
+    name: first.name,
+    method: first.method === 'cloud' ? 'custom' : first.method,
+  };
+}
+
+// Legacy function for backward compatibility - now adds instead of replacing
 export function saveAgentConnection(connection: AgentConnection): AgentConnection {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(connection));
+  addAgentConnection({
+    url: connection.url,
+    name: connection.name || 'Agent',
+    method: connection.method,
+  });
   return connection;
 }
 
+// Legacy function for backward compatibility
 export function clearAgentConnection(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  // Only clear if there's exactly one connection (legacy behavior)
+  const connections = loadAgentConnections();
+  if (connections.length === 1) {
+    clearAllAgentConnections();
+  }
 }
 
 interface AgentConnectionSettingsProps {
@@ -308,7 +448,8 @@ export function AgentConnectionSettings({
           setLocalhostPort(port);
         } else {
           setConnectionType('remote');
-          setRemoteMethod(existing.method);
+          // Treat 'cloud' as 'custom' in this legacy UI
+          setRemoteMethod(existing.method === 'cloud' ? 'custom' : existing.method);
           setCustomUrl(existing.url);
         }
         setStep(2);

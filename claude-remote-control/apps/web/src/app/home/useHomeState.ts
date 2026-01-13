@@ -1,12 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
-import { loadAgentConnection, saveAgentConnection } from '@/components/AgentConnectionSettings';
+import {
+  loadAgentConnections,
+  addAgentConnection,
+  removeAgentConnection,
+  type StoredAgentConnection,
+  type AgentConnection,
+} from '@/components/AgentConnectionSettings';
 import type { RalphLoopConfig } from '247-shared';
 import type { LocalMachine, SelectedSession } from './types';
 import { DEFAULT_MACHINE_ID } from './types';
+
+// Helper to convert StoredAgentConnection to LocalMachine
+function connectionToMachine(connection: StoredAgentConnection): LocalMachine {
+  return {
+    id: connection.id,
+    name: connection.name,
+    status: 'online',
+    config: {
+      projects: [],
+      agentUrl: connection.url,
+    },
+  };
+}
 
 export function useHomeState() {
   const router = useRouter();
@@ -17,8 +36,8 @@ export function useHomeState() {
     getArchivedSessions,
   } = useSessionPolling();
 
-  const [agentConnection, setAgentConnection] =
-    useState<ReturnType<typeof loadAgentConnection>>(null);
+  // Multi-agent support: store array of connections
+  const [agentConnections, setAgentConnections] = useState<StoredAgentConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectionModalOpen, setConnectionModalOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
@@ -28,28 +47,34 @@ export function useHomeState() {
   const hasRestoredFromUrl = useRef(false);
   const allSessions = getAllSessions();
 
-  // Load agent connection from localStorage
+  // Load all agent connections from localStorage
   useEffect(() => {
-    const connection = loadAgentConnection();
-    setAgentConnection(connection);
+    const connections = loadAgentConnections();
+    setAgentConnections(connections);
 
-    if (connection) {
-      const machine: LocalMachine = {
-        id: DEFAULT_MACHINE_ID,
-        name: connection.name || 'Local Agent',
-        status: 'online',
-        config: {
-          projects: [],
-          agentUrl: connection.url,
-        },
-      };
-      setPollingMachines([machine]);
+    if (connections.length > 0) {
+      // Convert all connections to machines and pass to polling context
+      const machines = connections.map(connectionToMachine);
+      setPollingMachines(machines);
     } else {
       setPollingMachines([]);
     }
 
     setLoading(false);
   }, [setPollingMachines]);
+
+  // Legacy compatibility: get first connection as "agentConnection"
+  const agentConnection = useMemo(() => {
+    if (agentConnections.length === 0) return null;
+    const first = agentConnections[0];
+    return {
+      url: first.url,
+      name: first.name,
+      method: first.method,
+      isCloud: first.isCloud,
+      cloudAgentId: first.cloudAgentId,
+    };
+  }, [agentConnections]);
 
   // Restore session from URL on load OR create new session from URL params
   useEffect(() => {
@@ -207,25 +232,71 @@ export function useHomeState() {
     [selectedSession, clearSessionFromUrl]
   );
 
+  // Add a new connection (does NOT replace existing ones)
   const handleConnectionSaved = useCallback(
-    (connection: ReturnType<typeof saveAgentConnection>) => {
-      setAgentConnection(connection);
-      const machine: LocalMachine = {
-        id: DEFAULT_MACHINE_ID,
-        name: connection.name || 'Local Agent',
-        status: 'online',
-        config: {
-          projects: [],
-          agentUrl: connection.url,
-        },
-      };
-      setPollingMachines([machine]);
+    (connection: AgentConnection) => {
+      // Add the new connection to storage and state
+      const newConnection = addAgentConnection({
+        url: connection.url,
+        name: connection.name || 'Agent',
+        method: connection.method,
+      });
+
+      setAgentConnections((prev) => {
+        // Check if this connection already exists (by URL)
+        const existingIndex = prev.findIndex(
+          (c) => c.url.toLowerCase() === connection.url.toLowerCase()
+        );
+
+        if (existingIndex >= 0) {
+          // Update existing connection
+          const updated = [...prev];
+          updated[existingIndex] = newConnection;
+          return updated;
+        } else {
+          // Add new connection
+          return [...prev, newConnection];
+        }
+      });
+
+      // Update polling machines with all connections
+      setAgentConnections((current) => {
+        const machines = current.map(connectionToMachine);
+        setPollingMachines(machines);
+        return current;
+      });
     },
     [setPollingMachines]
   );
 
+  // Remove a specific connection by ID
+  const handleConnectionRemoved = useCallback(
+    (connectionId: string) => {
+      // Remove from localStorage
+      removeAgentConnection(connectionId);
+
+      // Update state
+      setAgentConnections((prev) => {
+        const updated = prev.filter((c) => c.id !== connectionId);
+        // Update polling machines
+        const machines = updated.map(connectionToMachine);
+        setPollingMachines(machines);
+        return updated;
+      });
+
+      // If selected session was on this machine, clear it
+      if (selectedSession?.machineId === connectionId) {
+        setSelectedSession(null);
+        clearSessionFromUrl();
+      }
+    },
+    [selectedSession, clearSessionFromUrl, setPollingMachines]
+  );
+
+  // Legacy: clear all connections (kept for backward compatibility)
   const handleConnectionCleared = useCallback(() => {
-    setAgentConnection(null);
+    // Clear all connections
+    setAgentConnections([]);
     setPollingMachines([]);
     setSelectedSession(null);
     clearSessionFromUrl();
@@ -243,24 +314,19 @@ export function useHomeState() {
     );
   }, [selectedSession, allSessions]);
 
-  const currentMachine: LocalMachine | null = agentConnection
-    ? {
-        id: DEFAULT_MACHINE_ID,
-        name: agentConnection.name || 'Local Agent',
-        status: 'online',
-        config: {
-          projects: [],
-          agentUrl: agentConnection.url,
-        },
-      }
-    : null;
+  // All machines from all connections
+  const machines: LocalMachine[] = agentConnections.map(connectionToMachine);
+
+  // Legacy: currentMachine is the first machine (for backward compatibility)
+  const currentMachine: LocalMachine | null = machines.length > 0 ? machines[0] : null;
 
   const needsAttention = allSessions.filter((s) => s.status === 'needs_attention').length;
 
   return {
     // State
     loading,
-    agentConnection,
+    agentConnection, // Legacy: first connection
+    agentConnections, // NEW: all connections
     connectionModalOpen,
     setConnectionModalOpen,
     newSessionOpen,
@@ -271,7 +337,8 @@ export function useHomeState() {
     setIsFullscreen,
     allSessions,
     needsAttention,
-    currentMachine,
+    currentMachine, // Legacy: first machine
+    machines, // NEW: all machines
 
     // Data fetchers
     getArchivedSessions,
@@ -285,6 +352,7 @@ export function useHomeState() {
     handleSessionKilled,
     handleSessionArchived,
     handleConnectionSaved,
+    handleConnectionRemoved, // NEW: remove specific connection
     handleConnectionCleared,
     clearSessionFromUrl,
   };

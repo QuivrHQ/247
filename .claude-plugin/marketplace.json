@@ -1,18 +1,17 @@
 {
   "name": "247-plugins",
   "description": "Official plugins for 247 - Remote Claude Code access",
-  "maintainer": "247 Team",
-  "repository": "https://github.com/QuivrHQ/247",
+  "owner": {
+    "name": "QuivrHQ",
+    "url": "https://github.com/QuivrHQ"
+  },
   "plugins": [
     {
       "name": "247-orchestrator",
       "description": "Multi-agent orchestration - spawn and control parallel Claude sessions",
       "version": "1.0.0",
-      "path": "./claude-remote-control/packages/plugin-247",
-      "keywords": ["multi-agent", "parallel", "orchestration", "spawn", "247"],
-      "requirements": {
-        "agent247": ">=2.18.0"
-      }
+      "source": "./claude-remote-control/packages/plugin-247",
+      "keywords": ["multi-agent", "parallel", "orchestration", "spawn", "247"]
     }
   ]
 }

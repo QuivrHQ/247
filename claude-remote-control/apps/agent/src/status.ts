@@ -111,6 +111,9 @@ export function broadcastSessionArchived(sessionName: string, session: WSSession
  * @param prefix - Optional prefix to add after project (e.g., 'spawn' -> project--spawn-adj-noun-num)
  */
 export function generateSessionName(project: string, prefix?: string): string {
+  // Sanitize project name for tmux session names (no slashes, colons, or dots)
+  const sanitizedProject = project.replace(/[/:.]/g, '-');
+
   const adjectives = [
     'brave',
     'swift',
@@ -129,9 +132,9 @@ export function generateSessionName(project: string, prefix?: string): string {
   const num = Math.floor(Math.random() * 100);
 
   if (prefix) {
-    return `${project}--${prefix}-${adj}-${noun}-${num}`;
+    return `${sanitizedProject}--${prefix}-${adj}-${noun}-${num}`;
   }
-  return `${project}--${adj}-${noun}-${num}`;
+  return `${sanitizedProject}--${adj}-${noun}-${num}`;
 }
 
 /**

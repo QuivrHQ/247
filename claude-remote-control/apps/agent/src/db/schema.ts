@@ -37,6 +37,9 @@ export interface DbSession {
   task_id: string | null;
   exit_code: number | null;
   exited_at: number | null;
+  // Output capture (v10)
+  output_content: string | null;
+  output_captured_at: number | null;
 }
 
 export interface DbStatusHistory {
@@ -101,6 +104,9 @@ export interface UpsertSessionInput {
   task_id?: string | null;
   exit_code?: number | null;
   exited_at?: number | null;
+  // Output capture (v10)
+  output_content?: string | null;
+  output_captured_at?: number | null;
 }
 
 export interface UpsertEnvironmentInput {
@@ -115,7 +121,7 @@ export interface UpsertEnvironmentInput {
 // SQL Schema Definitions
 // ============================================================================
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export const CREATE_TABLES_SQL = `
 -- Sessions: current state of terminal sessions
@@ -151,7 +157,10 @@ CREATE TABLE IF NOT EXISTS sessions (
   parent_session TEXT,
   task_id TEXT,
   exit_code INTEGER,
-  exited_at INTEGER
+  exited_at INTEGER,
+  -- Output capture (v10)
+  output_content TEXT,
+  output_captured_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_name ON sessions(name);

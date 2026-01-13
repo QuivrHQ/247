@@ -20,7 +20,9 @@ import {
 } from '../db/environments.js';
 import { executionManager, worktreeManager } from '../services/index.js';
 import { config } from '../config.js';
-import { createTerminal } from '../terminal.js';
+import { createTerminal, readAndCleanupSpawnOutput, getSpawnOutputPath } from '../terminal.js';
+import * as fs from 'fs';
+import { isProjectAllowed } from './editor.js';
 
 export function createSessionRoutes(): Router {
   const router = Router();
@@ -65,8 +67,8 @@ export function createSessionRoutes(): Router {
       return res.status(400).json({ success: false, error: 'Project is required' });
     }
 
-    // Validate project is in whitelist
-    if (!config.projects.whitelist.includes(project)) {
+    // Validate project is allowed (whitelist empty = allow any project under basePath)
+    if (!isProjectAllowed(project)) {
       return res.status(400).json({
         success: false,
         error: `Project "${project}" is not in whitelist`,
@@ -147,14 +149,28 @@ export function createSessionRoutes(): Router {
         task_id: taskId,
       });
 
-      // Set up exit handler
+      // Set up exit handler - read output from tee file
       terminal.onExit(({ exitCode }) => {
         console.log(`[Spawn] Session ${sessionName} exited with code ${exitCode}`);
+
+        // Read output from the tee file (written by the wrapped command)
+        const outputContent = readAndCleanupSpawnOutput(sessionName);
+        if (outputContent) {
+          console.log(
+            `[Spawn] Captured ${outputContent.length} bytes of output for ${sessionName}`
+          );
+        } else {
+          console.log(`[Spawn] No output file found for ${sessionName}`);
+        }
+
+        // Store output and exit info in database
         sessionsDb.upsertSession(sessionName, {
           status: 'idle',
           lastEvent: `Exited (${exitCode})`,
           exit_code: exitCode,
           exited_at: Date.now(),
+          output_content: outputContent,
+          output_captured_at: outputContent ? Date.now() : undefined,
         });
         executionManager.unregister(sessionName);
       });
@@ -235,8 +251,57 @@ export function createSessionRoutes(): Router {
         returnedLines: outputLines.length,
         isRunning,
         capturedAt: Date.now(),
+        source: 'live' as const,
       });
     } catch {
+      // Fallback 1: Try reading from spawn output file (tee file)
+      const spawnOutputPath = getSpawnOutputPath(sessionName);
+      try {
+        let output = fs.readFileSync(spawnOutputPath, 'utf-8');
+
+        // Strip ANSI codes if plain format requested
+        if (format === 'plain') {
+          // eslint-disable-next-line no-control-regex
+          output = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+        }
+
+        const outputLines = output.split('\n');
+        return res.json({
+          sessionName,
+          output,
+          totalLines: outputLines.length,
+          returnedLines: outputLines.length,
+          isRunning: false,
+          capturedAt: Date.now(),
+          source: 'file' as const,
+        });
+      } catch {
+        // File doesn't exist, try database
+      }
+
+      // Fallback 2: Check database for stored output
+      const session = sessionsDb.getSession(sessionName);
+      if (session?.output_content) {
+        let output = session.output_content;
+
+        // Strip ANSI codes if plain format requested
+        if (format === 'plain') {
+          // eslint-disable-next-line no-control-regex
+          output = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+        }
+
+        const outputLines = output.split('\n');
+        return res.json({
+          sessionName,
+          output,
+          totalLines: outputLines.length,
+          returnedLines: outputLines.length,
+          isRunning: false,
+          capturedAt: session.output_captured_at ?? session.exited_at ?? Date.now(),
+          source: 'database' as const,
+        });
+      }
+
       res.status(404).json({ error: 'Session not found' });
     }
   });
@@ -431,6 +496,61 @@ export function createSessionRoutes(): Router {
     });
 
     res.json(sessions);
+  });
+
+  // Get single session status by name (from DB, works for completed sessions too)
+  router.get('/:sessionName/status', (req, res) => {
+    const { sessionName } = req.params;
+
+    if (!/^[\w-]+$/.test(sessionName)) {
+      return res.status(400).json({ error: 'Invalid session name' });
+    }
+
+    // First check in-memory status (active sessions)
+    const hookData = tmuxSessionStatus.get(sessionName);
+
+    // Then check database
+    const dbSession = sessionsDb.getSession(sessionName);
+
+    if (!hookData && !dbSession) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const envId = getSessionEnvironment(sessionName);
+    const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
+
+    // Merge data from both sources, preferring hookData for active sessions
+    const sessionInfo: WSSessionInfo = {
+      name: sessionName,
+      project: dbSession?.project ?? hookData?.project ?? '',
+      createdAt: dbSession?.created_at ?? Date.now(),
+      status: hookData?.status ?? dbSession?.status ?? 'idle',
+      attentionReason: hookData?.attentionReason ?? dbSession?.attention_reason ?? undefined,
+      statusSource: hookData ? 'hook' : 'hook',
+      lastEvent: hookData?.lastEvent ?? dbSession?.last_event ?? undefined,
+      lastStatusChange: hookData?.lastStatusChange ?? dbSession?.last_status_change,
+      lastActivity: hookData?.lastActivity ?? dbSession?.last_activity,
+      archivedAt: dbSession?.archived_at ?? undefined,
+      environmentId: envId,
+      environment: envMeta
+        ? {
+            id: envMeta.id,
+            name: envMeta.name,
+            provider: envMeta.provider,
+            icon: envMeta.icon,
+            isDefault: envMeta.isDefault,
+          }
+        : undefined,
+      model: hookData?.model ?? dbSession?.model ?? undefined,
+      costUsd: hookData?.costUsd ?? dbSession?.cost_usd ?? undefined,
+      contextUsage: hookData?.contextUsage ?? dbSession?.context_usage ?? undefined,
+      linesAdded: hookData?.linesAdded ?? dbSession?.lines_added ?? undefined,
+      linesRemoved: hookData?.linesRemoved ?? dbSession?.lines_removed ?? undefined,
+      worktreePath: dbSession?.worktree_path ?? undefined,
+      branchName: dbSession?.branch_name ?? undefined,
+    };
+
+    res.json(sessionInfo);
   });
 
   // Get terminal preview (last N lines from tmux pane)

@@ -1,6 +1,8 @@
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
+import * as fs from 'fs';
+import * as os from 'os';
 import {
   generateInitScript,
   writeInitScript,
@@ -8,6 +10,28 @@ import {
   detectUserShell,
 } from './lib/init-script.js';
 import * as path from 'path';
+
+/**
+ * Get the path to the output file for a spawn session
+ */
+export function getSpawnOutputPath(sessionName: string): string {
+  return path.join(os.tmpdir(), `247-spawn-${sessionName}.txt`);
+}
+
+/**
+ * Read and cleanup spawn output file
+ * Returns the content or undefined if file doesn't exist
+ */
+export function readAndCleanupSpawnOutput(sessionName: string): string | undefined {
+  const outputPath = getSpawnOutputPath(sessionName);
+  try {
+    const content = fs.readFileSync(outputPath, 'utf-8');
+    fs.unlinkSync(outputPath); // Cleanup
+    return content;
+  } catch {
+    return undefined;
+  }
+}
 
 const execAsync = promisify(exec);
 
@@ -87,7 +111,13 @@ export function createTerminal(
       }
     }
 
-    tmuxArgs = ['new-session', '-s', sessionName, '-c', cwd, ...envFlags, spawnCommand];
+    // Wrap command with tee to capture output to file
+    // Use PIPESTATUS to preserve the exit code from the actual command
+    const outputPath = getSpawnOutputPath(sessionName);
+    const wrappedCommand = `bash -c '${spawnCommand.replace(/'/g, "'\\''")} 2>&1 | tee "${outputPath}"; exit \${PIPESTATUS[0]}'`;
+
+    // Run command with output capture - file will be read in onExit handler
+    tmuxArgs = ['new-session', '-s', sessionName, '-c', cwd, ...envFlags, wrappedCommand];
   } else {
     // Extract project name from cwd (last directory component)
     const projectName = path.basename(cwd) || 'unknown';

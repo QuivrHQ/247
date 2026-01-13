@@ -316,6 +316,7 @@ export interface SessionOutputResponse {
   returnedLines: number;
   isRunning: boolean;
   capturedAt: number;
+  source?: 'live' | 'file' | 'database'; // 'live' = from tmux, 'file' = from tee output file, 'database' = from stored output
 }
 
 // Session input

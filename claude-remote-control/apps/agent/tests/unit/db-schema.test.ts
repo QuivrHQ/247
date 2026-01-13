@@ -25,8 +25,8 @@ describe('Database Schema', () => {
       expect(Number.isInteger(SCHEMA_VERSION)).toBe(true);
     });
 
-    it('current version is 9', () => {
-      expect(SCHEMA_VERSION).toBe(9);
+    it('current version is 10', () => {
+      expect(SCHEMA_VERSION).toBe(10);
     });
   });
 
@@ -235,6 +235,9 @@ describe('Database Schema', () => {
           task_id: null,
           exit_code: null,
           exited_at: null,
+          // Output capture (v10)
+          output_content: null,
+          output_captured_at: null,
         };
 
         expect(session.id).toBe(1);
@@ -274,6 +277,8 @@ describe('Database Schema', () => {
             task_id: null,
             exit_code: null,
             exited_at: null,
+            output_content: null,
+            output_captured_at: null,
           };
 
           expect(session.attention_reason).toBe(reason);
@@ -313,6 +318,8 @@ describe('Database Schema', () => {
             task_id: null,
             exit_code: null,
             exited_at: null,
+            output_content: null,
+            output_captured_at: null,
           };
 
           expect(session.status).toBe(status);
@@ -349,6 +356,8 @@ describe('Database Schema', () => {
           task_id: null,
           exit_code: null,
           exited_at: null,
+          output_content: null,
+          output_captured_at: null,
         };
 
         expect(session.model).toBe('Opus 4.5');

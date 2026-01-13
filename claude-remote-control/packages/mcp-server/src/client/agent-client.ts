@@ -44,6 +44,8 @@ export interface SessionOutputResponse {
   totalLines: number;
   returnedLines: number;
   isRunning: boolean;
+  capturedAt: number;
+  source?: 'live' | 'file' | 'database'; // 'live' = from tmux, 'file' = from tee output file, 'database' = from stored output
 }
 
 export interface SessionInputResponse {
@@ -92,8 +94,8 @@ export class AgentClient {
 
   async getSession(name: string): Promise<SessionInfo | null> {
     try {
-      const sessions = await this.listSessions();
-      return sessions.find((s) => s.name === name) || null;
+      // Use dedicated status endpoint that checks both memory and DB
+      return await this.fetch<SessionInfo>(`/api/sessions/${encodeURIComponent(name)}/status`);
     } catch {
       return null;
     }

@@ -63,7 +63,8 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       model, cost_usd, context_usage, lines_added, lines_removed,
       ralph_enabled, ralph_config, ralph_iteration, ralph_status,
       worktree_path, branch_name,
-      spawn_prompt, parent_session, task_id, exit_code, exited_at
+      spawn_prompt, parent_session, task_id, exit_code, exited_at,
+      output_content, output_captured_at
     )
     VALUES (
       @name, @project, @status, @attentionReason, @lastEvent,
@@ -71,7 +72,8 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       @model, @costUsd, @contextUsage, @linesAdded, @linesRemoved,
       @ralphEnabled, @ralphConfig, @ralphIteration, @ralphStatus,
       @worktreePath, @branchName,
-      @spawnPrompt, @parentSession, @taskId, @exitCode, @exitedAt
+      @spawnPrompt, @parentSession, @taskId, @exitCode, @exitedAt,
+      @outputContent, @outputCapturedAt
     )
     ON CONFLICT(name) DO UPDATE SET
       status = COALESCE(@status, status),
@@ -96,7 +98,9 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
       parent_session = COALESCE(@parentSession, parent_session),
       task_id = COALESCE(@taskId, task_id),
       exit_code = COALESCE(@exitCode, exit_code),
-      exited_at = COALESCE(@exitedAt, exited_at)
+      exited_at = COALESCE(@exitedAt, exited_at),
+      output_content = COALESCE(@outputContent, output_content),
+      output_captured_at = COALESCE(@outputCapturedAt, output_captured_at)
   `);
 
   stmt.run({
@@ -126,6 +130,8 @@ export function upsertSession(name: string, input: UpsertSessionInput): DbSessio
     taskId: input.task_id ?? null,
     exitCode: input.exit_code ?? null,
     exitedAt: input.exited_at ?? null,
+    outputContent: input.output_content ?? null,
+    outputCapturedAt: input.output_captured_at ?? null,
   });
 
   // Record status history if status changed

@@ -112,6 +112,9 @@ function runMigrations(database: Database.Database): void {
     if (currentVersion < 9) {
       migrateToV9(database);
     }
+    if (currentVersion < 10) {
+      migrateToV10(database);
+    }
 
     // Record the new version
     database
@@ -213,6 +216,22 @@ function ensureRequiredColumns(database: Database.Database): void {
   ];
 
   for (const col of spawnColumns) {
+    if (!sessionColumnNames.has(col.name)) {
+      console.log(`[DB] Adding missing ${col.name} column to sessions`);
+      database.exec(col.sql);
+    }
+  }
+
+  // v10: Output capture columns
+  const outputColumns = [
+    { name: 'output_content', sql: 'ALTER TABLE sessions ADD COLUMN output_content TEXT' },
+    {
+      name: 'output_captured_at',
+      sql: 'ALTER TABLE sessions ADD COLUMN output_captured_at INTEGER',
+    },
+  ];
+
+  for (const col of outputColumns) {
     if (!sessionColumnNames.has(col.name)) {
       console.log(`[DB] Adding missing ${col.name} column to sessions`);
       database.exec(col.sql);
@@ -381,6 +400,29 @@ function migrateToV9(database: Database.Database): void {
     console.log('[DB] v9 migration: Added indexes for parent_session and task_id');
   } catch {
     // Indexes might already exist
+  }
+}
+
+/**
+ * Migration to v10: Add output capture columns to sessions table
+ */
+function migrateToV10(database: Database.Database): void {
+  const columns = database.pragma('table_info(sessions)') as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((c) => c.name));
+
+  const outputColumns = [
+    { name: 'output_content', sql: 'ALTER TABLE sessions ADD COLUMN output_content TEXT' },
+    {
+      name: 'output_captured_at',
+      sql: 'ALTER TABLE sessions ADD COLUMN output_captured_at INTEGER',
+    },
+  ];
+
+  for (const col of outputColumns) {
+    if (!columnNames.has(col.name)) {
+      console.log(`[DB] v10 migration: Adding ${col.name} column to sessions`);
+      database.exec(col.sql);
+    }
   }
 }
 

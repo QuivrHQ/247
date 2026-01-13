@@ -8,6 +8,7 @@ export const PACKAGE_FILES = [
   'package.json',
   'packages/cli/package.json',
   'packages/shared/package.json',
+  'packages/mcp-server/package.json',
   'apps/agent/package.json',
   'apps/web/package.json',
   'apps/cloud-agent/package.cloud.json',

@@ -1,4 +1,3 @@
-import withSerwistInit from '@serwist/next';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -8,12 +7,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
 const APP_VERSION = pkg.version;
 
-const withSerwist = withSerwistInit({
-  swSrc: 'src/app/sw.ts',
-  swDest: 'public/sw.js',
-  disable: process.env.NODE_ENV === 'development',
-});
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
@@ -21,12 +14,10 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  // Serwist requires webpack, not Turbopack
-  turbopack: {},
   // Inject version at build time for auto-update system
   env: {
     NEXT_PUBLIC_APP_VERSION: APP_VERSION,
   },
 };
 
-export default withSerwist(nextConfig);
+export default nextConfig;

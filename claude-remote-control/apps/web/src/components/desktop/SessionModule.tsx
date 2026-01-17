@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 import { StatusRing, statusStyles } from '@/components/ui/StatusRing';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { EnvironmentBadge } from '@/components/EnvironmentBadge';
 import type { SessionInfo } from '@/lib/notifications';
 import type { SessionStatus, AttentionReason } from '247-shared';
 
@@ -342,15 +341,6 @@ export const SessionModule = forwardRef<HTMLButtonElement, SessionModuleProps>(
                 <span className="truncate font-mono text-sm font-medium text-white">
                   {displayName}
                 </span>
-                {session.environment && (
-                  <EnvironmentBadge
-                    provider={session.environment.provider}
-                    icon={session.environment.icon}
-                    name={session.environment.name}
-                    showLabel={false}
-                    size="sm"
-                  />
-                )}
                 {shortcut && (
                   <kbd className="hidden rounded border border-white/10 bg-white/10 px-1 py-0.5 font-mono text-[9px] text-white/30 group-hover:inline-flex">
                     ⌥{shortcut}

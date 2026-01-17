@@ -7,22 +7,17 @@ import express from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import { createServer as createHttpServer } from 'http';
-import { initDatabase, closeDatabase, migrateEnvironmentsFromJson } from './db/index.js';
-import { ensureDefaultEnvironment } from './db/environments.js';
+import { initDatabase, closeDatabase } from './db/index.js';
 import * as sessionsDb from './db/sessions.js';
 
 // Routes
 import {
   createProjectRoutes,
-  createEnvironmentRoutes,
   createSessionRoutes,
   createHeartbeatRoutes,
   createNotificationRoutes,
   createStopRoutes,
 } from './routes/index.js';
-import { createPushRoutes } from './routes/push.js';
-import { createWebhookRoutes } from './routes/webhooks.js';
-import { initWebPush } from './push/vapid.js';
 
 // StatusLine setup and heartbeat monitor
 import { ensureStatusLineConfigured } from './setup-statusline.js';
@@ -41,9 +36,7 @@ export async function createServer() {
   const wss = new WebSocketServer({ noServer: true });
 
   // Initialize SQLite database
-  const db = initDatabase();
-  migrateEnvironmentsFromJson(db);
-  ensureDefaultEnvironment();
+  initDatabase();
 
   // Reconcile sessions with active tmux sessions
   const activeTmuxSessions = getActiveTmuxSessions();
@@ -59,9 +52,6 @@ export async function createServer() {
   // Configure statusLine for Claude Code integration
   ensureStatusLineConfigured();
 
-  // Initialize Web Push for notifications
-  initWebPush();
-
   // Start heartbeat timeout monitor
   startHeartbeatMonitor();
 
@@ -72,13 +62,10 @@ export async function createServer() {
 
   // Mount API routes
   app.use('/api', createProjectRoutes());
-  app.use('/api/environments', createEnvironmentRoutes());
   app.use('/api/sessions', createSessionRoutes());
   app.use('/api/heartbeat', createHeartbeatRoutes());
   app.use('/api/notification', createNotificationRoutes());
   app.use('/api/stop', createStopRoutes());
-  app.use('/api/push', createPushRoutes());
-  app.use('/api/webhooks', createWebhookRoutes());
 
   // Handle WebSocket upgrades
   server.on('upgrade', async (req, socket, head) => {

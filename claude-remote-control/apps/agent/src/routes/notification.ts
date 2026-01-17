@@ -8,7 +8,6 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { tmuxSessionStatus, broadcastStatusUpdate, type HookStatus } from '../status.js';
 import * as sessionsDb from '../db/sessions.js';
-import { getEnvironmentMetadata, getSessionEnvironment } from '../db/environments.js';
 import type { AttentionReason } from '247-shared';
 
 const router: RouterType = Router();
@@ -178,9 +177,6 @@ router.post('/', (req, res) => {
 
   // Broadcast status change to dashboard
   if (statusChanged) {
-    const envId = getSessionEnvironment(tmux_session);
-    const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
     broadcastStatusUpdate({
       name: tmux_session,
       project: project || '',
@@ -191,16 +187,6 @@ router.post('/', (req, res) => {
       lastStatusChange: hookData.lastStatusChange,
       createdAt: dbSession?.created_at || now,
       lastActivity: now,
-      environmentId: envId,
-      environment: envMeta
-        ? {
-            id: envMeta.id,
-            name: envMeta.name,
-            provider: envMeta.provider,
-            icon: envMeta.icon,
-            isDefault: envMeta.isDefault,
-          }
-        : undefined,
       model: hookData.model,
       costUsd: hookData.costUsd,
       contextUsage: hookData.contextUsage,

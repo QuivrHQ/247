@@ -23,7 +23,6 @@ import {
 import { type SessionInfo } from '@/lib/notifications';
 import { type SessionStatus, type AttentionReason } from '247-shared';
 import { ConfirmDialog } from './ui/confirm-dialog';
-import { EnvironmentBadge } from './EnvironmentBadge';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 
@@ -446,15 +445,6 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
             <div className="min-w-0 flex-1 pr-6">
               <div className="flex items-center gap-2">
                 <span className="truncate text-sm font-medium text-white">{displayName}</span>
-                {session.environment && (
-                  <EnvironmentBadge
-                    provider={session.environment.provider}
-                    icon={session.environment.icon}
-                    name={session.environment.name}
-                    showLabel={false}
-                    size="sm"
-                  />
-                )}
                 {shortcut && (
                   <kbd className="hidden rounded border border-white/10 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/40 group-hover:inline-flex">
                     ⌥{shortcut}

@@ -1,12 +1,8 @@
 import Database from 'better-sqlite3';
-import { existsSync, mkdirSync, readFileSync } from 'fs';
-import { join, dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, mkdirSync } from 'fs';
+import { dirname, join, resolve } from 'path';
 import { CREATE_TABLES_SQL, SCHEMA_VERSION, RETENTION_CONFIG } from './schema.js';
 import type { DbSchemaVersion } from './schema.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Database file location: ~/.247/data/agent.db
 const DATA_DIR = resolve(process.env.HOME || '~', '.247', 'data');
@@ -124,6 +120,9 @@ function runMigrations(database: Database.Database): void {
     if (currentVersion < 13) {
       migrateToV13(database);
     }
+    if (currentVersion < 14) {
+      migrateToV14(database);
+    }
 
     // Record the new version
     database
@@ -148,13 +147,6 @@ function runMigrations(database: Database.Database): void {
  * Ensure all required columns exist (handles incomplete migrations)
  */
 function ensureRequiredColumns(database: Database.Database): void {
-  // Check environments.icon column
-  const envColumns = database.pragma('table_info(environments)') as Array<{ name: string }>;
-  if (!envColumns.some((c) => c.name === 'icon')) {
-    console.log('[DB] Adding missing icon column to environments');
-    database.exec('ALTER TABLE environments ADD COLUMN icon TEXT');
-  }
-
   // Check sessions columns
   const sessionColumns = database.pragma('table_info(sessions)') as Array<{ name: string }>;
   const sessionColumnNames = new Set(sessionColumns.map((c) => c.name));
@@ -228,17 +220,11 @@ function ensureRequiredColumns(database: Database.Database): void {
 }
 
 /**
- * Migration to v2: Add icon column to environments table
+ * Migration to v2: No-op (environments table removed)
  */
-function migrateToV2(database: Database.Database): void {
-  // Check if icon column already exists
-  const columns = database.pragma('table_info(environments)') as Array<{ name: string }>;
-  const hasIcon = columns.some((c) => c.name === 'icon');
-
-  if (!hasIcon) {
-    console.log('[DB] v2 migration: Adding icon column to environments');
-    database.exec('ALTER TABLE environments ADD COLUMN icon TEXT');
-  }
+function migrateToV2(_database: Database.Database): void {
+  // Previously added icon column to environments, but environments table has been removed
+  console.log('[DB] v2 migration: No-op (environments table removed)');
 }
 
 /**
@@ -513,6 +499,53 @@ function migrateToV13(database: Database.Database): void {
 }
 
 /**
+ * Migration to v14: Simplification - remove push notifications and webhooks
+ */
+function migrateToV14(database: Database.Database): void {
+  // Drop push_subscriptions table
+  const pushTableExists = database
+    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='push_subscriptions'`)
+    .get();
+
+  if (pushTableExists) {
+    console.log('[DB] v14 migration: Dropping push_subscriptions table');
+    database.exec('DROP TABLE IF EXISTS push_subscriptions');
+  }
+
+  // Drop webhooks table
+  const webhooksTableExists = database
+    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='webhooks'`)
+    .get();
+
+  if (webhooksTableExists) {
+    console.log('[DB] v14 migration: Dropping webhooks table');
+    database.exec('DROP TABLE IF EXISTS webhooks');
+  }
+
+  // Drop environments table
+  const envTableExists = database
+    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='environments'`)
+    .get();
+
+  if (envTableExists) {
+    console.log('[DB] v14 migration: Dropping environments table');
+    database.exec('DROP TABLE IF EXISTS environments');
+  }
+
+  // Drop session_environments table
+  const sessionEnvTableExists = database
+    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='session_environments'`)
+    .get();
+
+  if (sessionEnvTableExists) {
+    console.log('[DB] v14 migration: Dropping session_environments table');
+    database.exec('DROP TABLE IF EXISTS session_environments');
+  }
+
+  console.log('[DB] v14 migration: Simplification complete - removed push, webhooks, environments');
+}
+
+/**
  * Get current schema version
  */
 function getCurrentSchemaVersion(database: Database.Database): number {
@@ -546,76 +579,11 @@ function getCurrentSchemaVersion(database: Database.Database): number {
 }
 
 /**
- * Migrate environments from JSON file to database
- * Only runs if environments.json exists and environments table is empty
- */
-export function migrateEnvironmentsFromJson(database: Database.Database): boolean {
-  const ENVIRONMENTS_FILE = join(__dirname, '..', '..', 'environments.json');
-
-  // Check if JSON file exists
-  if (!existsSync(ENVIRONMENTS_FILE)) {
-    console.log('[DB] No environments.json found, skipping migration');
-    return false;
-  }
-
-  // Check if environments table is empty
-  const count = database.prepare('SELECT COUNT(*) as count FROM environments').get() as {
-    count: number;
-  };
-
-  if (count.count > 0) {
-    console.log('[DB] Environments table already has data, skipping migration');
-    return false;
-  }
-
-  try {
-    console.log('[DB] Migrating environments from JSON...');
-    const data = readFileSync(ENVIRONMENTS_FILE, 'utf-8');
-    const environments = JSON.parse(data) as Array<{
-      id: string;
-      name: string;
-      provider: string;
-      isDefault: boolean;
-      variables: Record<string, string>;
-      createdAt: number;
-      updatedAt: number;
-    }>;
-
-    const insert = database.prepare(`
-      INSERT INTO environments (id, name, provider, is_default, variables, created_at, updated_at)
-      VALUES (@id, @name, @provider, @isDefault, @variables, @createdAt, @updatedAt)
-    `);
-
-    const insertMany = database.transaction((envs: typeof environments) => {
-      for (const env of envs) {
-        insert.run({
-          id: env.id,
-          name: env.name,
-          provider: env.provider,
-          isDefault: env.isDefault ? 1 : 0,
-          variables: JSON.stringify(env.variables),
-          createdAt: env.createdAt,
-          updatedAt: env.updatedAt,
-        });
-      }
-    });
-
-    insertMany(environments);
-    console.log(`[DB] Migrated ${environments.length} environments from JSON`);
-    return true;
-  } catch (err) {
-    console.error('[DB] Failed to migrate environments from JSON:', err);
-    return false;
-  }
-}
-
-/**
  * Get database statistics for debugging
  */
 export function getDatabaseStats(): {
   sessions: number;
   history: number;
-  environments: number;
 } {
   const database = getDatabase();
 
@@ -625,14 +593,10 @@ export function getDatabaseStats(): {
   const history = database.prepare('SELECT COUNT(*) as count FROM status_history').get() as {
     count: number;
   };
-  const environments = database.prepare('SELECT COUNT(*) as count FROM environments').get() as {
-    count: number;
-  };
 
   return {
     sessions: sessions.count,
     history: history.count,
-    environments: environments.count,
   };
 }
 

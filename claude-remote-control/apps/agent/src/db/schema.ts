@@ -1,4 +1,4 @@
-import type { SessionStatus, AttentionReason, EnvironmentProvider } from '247-shared';
+import type { SessionStatus, AttentionReason } from '247-shared';
 
 // ============================================================================
 // Database Row Types
@@ -46,40 +46,9 @@ export interface DbStatusHistory {
   timestamp: number;
 }
 
-export interface DbEnvironment {
-  id: string;
-  name: string;
-  provider: EnvironmentProvider;
-  icon: string | null; // Lucide icon name
-  is_default: number; // SQLite uses 0/1 for booleans
-  variables: string; // JSON string
-  created_at: number;
-  updated_at: number;
-}
-
-export interface DbSessionEnvironment {
-  session_name: string;
-  environment_id: string;
-}
-
 export interface DbSchemaVersion {
   version: number;
   applied_at: number;
-}
-
-export type WebhookType = 'telegram' | 'slack' | 'discord' | 'generic';
-export type WebhookEvent = 'needs_attention' | 'task_complete' | 'session_start' | 'session_end';
-
-export interface DbWebhook {
-  id: string;
-  name: string;
-  url: string;
-  type: WebhookType;
-  enabled: number; // SQLite uses 0/1 for booleans
-  events: string; // JSON array of WebhookEvent
-  secret: string | null; // Optional secret for HMAC signing
-  created_at: number;
-  updated_at: number;
 }
 
 // ============================================================================
@@ -114,29 +83,11 @@ export interface UpsertSessionInput {
   output_captured_at?: number | null;
 }
 
-export interface UpsertEnvironmentInput {
-  id: string;
-  name: string;
-  provider: EnvironmentProvider;
-  isDefault: boolean;
-  variables: Record<string, string>;
-}
-
-export interface UpsertWebhookInput {
-  id?: string;
-  name: string;
-  url: string;
-  type: WebhookType;
-  enabled?: boolean;
-  events: WebhookEvent[];
-  secret?: string | null;
-}
-
 // ============================================================================
 // SQL Schema Definitions
 // ============================================================================
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 export const CREATE_TABLES_SQL = `
 -- Sessions: current state of terminal sessions
@@ -193,58 +144,11 @@ CREATE TABLE IF NOT EXISTS status_history (
 CREATE INDEX IF NOT EXISTS idx_history_session ON status_history(session_name);
 CREATE INDEX IF NOT EXISTS idx_history_timestamp ON status_history(timestamp);
 
--- Environments: API provider configurations
-CREATE TABLE IF NOT EXISTS environments (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  provider TEXT NOT NULL,
-  icon TEXT,
-  is_default INTEGER NOT NULL DEFAULT 0,
-  variables TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_environments_default ON environments(is_default);
-
--- Session-environment mapping
-CREATE TABLE IF NOT EXISTS session_environments (
-  session_name TEXT PRIMARY KEY,
-  environment_id TEXT NOT NULL
-);
-
 -- Schema version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL
 );
-
--- Push subscriptions for Web Push notifications (v8)
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  endpoint TEXT UNIQUE NOT NULL,
-  keys_p256dh TEXT NOT NULL,
-  keys_auth TEXT NOT NULL,
-  user_agent TEXT,
-  created_at INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_push_endpoint ON push_subscriptions(endpoint);
-
--- Webhooks for external notifications (v13)
-CREATE TABLE IF NOT EXISTS webhooks (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  url TEXT NOT NULL,
-  type TEXT NOT NULL DEFAULT 'generic',
-  enabled INTEGER NOT NULL DEFAULT 1,
-  events TEXT NOT NULL DEFAULT '["needs_attention"]',
-  secret TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled);
 `;
 
 // ============================================================================

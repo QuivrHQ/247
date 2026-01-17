@@ -12,12 +12,6 @@ import {
   generateSessionName,
 } from '../status.js';
 import * as sessionsDb from '../db/sessions.js';
-import {
-  getEnvironmentMetadata,
-  getSessionEnvironment,
-  clearSessionEnvironment,
-  setSessionEnvironment,
-} from '../db/environments.js';
 import { executionManager, worktreeManager } from '../services/index.js';
 import { config } from '../config.js';
 import { createTerminal, readAndCleanupSpawnOutput, getSpawnOutputPath } from '../terminal.js';
@@ -42,7 +36,6 @@ export function createSessionRoutes(): Router {
       taskId,
       worktree,
       branchName,
-      environmentId,
       timeout: _timeout,
       trustMode,
       model,
@@ -53,7 +46,6 @@ export function createSessionRoutes(): Router {
       taskId?: string;
       worktree?: boolean;
       branchName?: string;
-      environmentId?: string;
       timeout?: number;
       trustMode?: boolean;
       model?: string;
@@ -104,13 +96,7 @@ export function createSessionRoutes(): Router {
         }
       }
 
-      // Get custom env vars from environment if specified
       const customEnvVars: Record<string, string> = {};
-      if (environmentId) {
-        setSessionEnvironment(sessionName, environmentId);
-        // Environment variables will be loaded from the environment settings
-      }
-
       const cwd = worktreePath || projectPath;
 
       // Register with execution manager
@@ -407,9 +393,6 @@ export function createSessionRoutes(): Router {
           lastStatusChange = dbSession.last_status_change;
         }
 
-        const envId = getSessionEnvironment(name);
-        const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
         // Merge metrics: prefer hookData (fresh), fallback to DB (persisted)
         const model = hookData?.model ?? dbSession?.model ?? undefined;
         const costUsd = hookData?.costUsd ?? dbSession?.cost_usd ?? undefined;
@@ -427,16 +410,6 @@ export function createSessionRoutes(): Router {
           lastActivity: hookData?.lastActivity ?? dbSession?.last_activity,
           lastEvent,
           lastStatusChange,
-          environmentId: envId,
-          environment: envMeta
-            ? {
-                id: envMeta.id,
-                name: envMeta.name,
-                provider: envMeta.provider,
-                icon: envMeta.icon,
-                isDefault: envMeta.isDefault,
-              }
-            : undefined,
           // StatusLine metrics (merged from memory and DB)
           model,
           costUsd,
@@ -459,41 +432,26 @@ export function createSessionRoutes(): Router {
   router.get('/archived', (_req, res) => {
     const archivedSessions = sessionsDb.getArchivedSessions();
 
-    const sessions: WSSessionInfo[] = archivedSessions.map((session) => {
-      const envId = getSessionEnvironment(session.name);
-      const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
-      return {
-        name: session.name,
-        project: session.project,
-        createdAt: session.created_at,
-        status: session.status,
-        attentionReason: session.attention_reason ?? undefined,
-        statusSource: 'hook' as const,
-        lastEvent: session.last_event ?? undefined,
-        lastStatusChange: session.last_status_change,
-        archivedAt: session.archived_at ?? undefined,
-        environmentId: envId,
-        environment: envMeta
-          ? {
-              id: envMeta.id,
-              name: envMeta.name,
-              provider: envMeta.provider,
-              icon: envMeta.icon,
-              isDefault: envMeta.isDefault,
-            }
-          : undefined,
-        // StatusLine metrics from DB
-        model: session.model ?? undefined,
-        costUsd: session.cost_usd ?? undefined,
-        contextUsage: session.context_usage ?? undefined,
-        linesAdded: session.lines_added ?? undefined,
-        linesRemoved: session.lines_removed ?? undefined,
-        // Git worktree isolation
-        worktreePath: session.worktree_path ?? undefined,
-        branchName: session.branch_name ?? undefined,
-      };
-    });
+    const sessions: WSSessionInfo[] = archivedSessions.map((session) => ({
+      name: session.name,
+      project: session.project,
+      createdAt: session.created_at,
+      status: session.status,
+      attentionReason: session.attention_reason ?? undefined,
+      statusSource: 'hook' as const,
+      lastEvent: session.last_event ?? undefined,
+      lastStatusChange: session.last_status_change,
+      archivedAt: session.archived_at ?? undefined,
+      // StatusLine metrics from DB
+      model: session.model ?? undefined,
+      costUsd: session.cost_usd ?? undefined,
+      contextUsage: session.context_usage ?? undefined,
+      linesAdded: session.lines_added ?? undefined,
+      linesRemoved: session.lines_removed ?? undefined,
+      // Git worktree isolation
+      worktreePath: session.worktree_path ?? undefined,
+      branchName: session.branch_name ?? undefined,
+    }));
 
     res.json(sessions);
   });
@@ -516,9 +474,6 @@ export function createSessionRoutes(): Router {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const envId = getSessionEnvironment(sessionName);
-    const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
     // Merge data from both sources, preferring hookData for active sessions
     const sessionInfo: WSSessionInfo = {
       name: sessionName,
@@ -531,16 +486,6 @@ export function createSessionRoutes(): Router {
       lastStatusChange: hookData?.lastStatusChange ?? dbSession?.last_status_change,
       lastActivity: hookData?.lastActivity ?? dbSession?.last_activity,
       archivedAt: dbSession?.archived_at ?? undefined,
-      environmentId: envId,
-      environment: envMeta
-        ? {
-            id: envMeta.id,
-            name: envMeta.name,
-            provider: envMeta.provider,
-            icon: envMeta.icon,
-            isDefault: envMeta.isDefault,
-          }
-        : undefined,
       model: hookData?.model ?? dbSession?.model ?? undefined,
       costUsd: hookData?.costUsd ?? dbSession?.cost_usd ?? undefined,
       contextUsage: hookData?.contextUsage ?? dbSession?.context_usage ?? undefined,
@@ -614,9 +559,7 @@ export function createSessionRoutes(): Router {
       }
 
       sessionsDb.deleteSession(sessionName);
-      sessionsDb.clearSessionEnvironmentId(sessionName);
       tmuxSessionStatus.delete(sessionName);
-      clearSessionEnvironment(sessionName);
       executionManager.unregister(sessionName);
       broadcastSessionRemoved(sessionName);
 
@@ -668,9 +611,6 @@ export function createSessionRoutes(): Router {
     tmuxSessionStatus.delete(sessionName);
     executionManager.unregister(sessionName);
 
-    const envId = getSessionEnvironment(sessionName);
-    const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
     const archivedInfo: WSSessionInfo = {
       name: sessionName,
       project: archivedSession.project,
@@ -681,16 +621,6 @@ export function createSessionRoutes(): Router {
       lastEvent: archivedSession.last_event ?? undefined,
       lastStatusChange: archivedSession.last_status_change,
       archivedAt: archivedSession.archived_at ?? undefined,
-      environmentId: envId,
-      environment: envMeta
-        ? {
-            id: envMeta.id,
-            name: envMeta.name,
-            provider: envMeta.provider,
-            icon: envMeta.icon,
-            isDefault: envMeta.isDefault,
-          }
-        : undefined,
     };
 
     broadcastSessionArchived(sessionName, archivedInfo);

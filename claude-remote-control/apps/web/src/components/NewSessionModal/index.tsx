@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { EnvironmentFormModal } from '../EnvironmentFormModal';
 
 import { useFolders, useClone } from './hooks';
 import { MachineSelector } from './MachineSelector';
@@ -37,9 +36,6 @@ export function NewSessionModal({
 }: NewSessionModalProps) {
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('select');
-  const [selectedEnvironment, setSelectedEnvironment] = useState<string | null>(null);
-  const [envModalOpen, setEnvModalOpen] = useState(false);
-  const [envRefreshKey, setEnvRefreshKey] = useState(0);
 
   // Custom hooks
   const { folders, selectedProject, setSelectedProject, loadingFolders, addFolder } =
@@ -51,7 +47,6 @@ export function NewSessionModal({
     if (!open) {
       setSelectedMachine(null);
       setActiveTab('select');
-      setSelectedEnvironment(null);
       clone.resetCloneState();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,11 +71,11 @@ export function NewSessionModal({
         onOpenChange(false);
       }
       if (e.key === 'Enter' && selectedMachine && selectedProject && activeTab === 'select') {
-        onStartSession(selectedMachine.id, selectedProject, selectedEnvironment || undefined);
+        onStartSession(selectedMachine.id, selectedProject);
         onOpenChange(false);
       }
     },
-    [onOpenChange, onStartSession, selectedMachine, selectedProject, selectedEnvironment, activeTab]
+    [onOpenChange, onStartSession, selectedMachine, selectedProject, activeTab]
   );
 
   useEffect(() => {
@@ -92,12 +87,10 @@ export function NewSessionModal({
 
   const handleStartSession = () => {
     if (selectedMachine && selectedProject) {
-      onStartSession(selectedMachine.id, selectedProject, selectedEnvironment || undefined);
+      onStartSession(selectedMachine.id, selectedProject);
       onOpenChange(false);
     }
   };
-
-  const agentUrl = selectedMachine?.config?.agentUrl || 'localhost:4678';
 
   return (
     <AnimatePresence>
@@ -166,11 +159,6 @@ export function NewSessionModal({
                       selectedProject={selectedProject}
                       onSelectProject={setSelectedProject}
                       loadingFolders={loadingFolders}
-                      agentUrl={agentUrl}
-                      selectedEnvironment={selectedEnvironment}
-                      onSelectEnvironment={setSelectedEnvironment}
-                      onManageEnvironments={() => setEnvModalOpen(true)}
-                      envRefreshKey={envRefreshKey}
                     />
                   )}
 
@@ -218,13 +206,6 @@ export function NewSessionModal({
               </div>
             )}
           </motion.div>
-
-          <EnvironmentFormModal
-            open={envModalOpen}
-            onOpenChange={setEnvModalOpen}
-            agentUrl={agentUrl}
-            onSaved={() => setEnvRefreshKey((k) => k + 1)}
-          />
         </motion.div>
       )}
     </AnimatePresence>

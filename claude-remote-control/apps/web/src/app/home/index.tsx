@@ -11,7 +11,6 @@ import { MobileStatusStrip } from '@/components/mobile';
 import { InstallBanner } from '@/components/InstallBanner';
 import { SlideOverPanel } from '@/components/ui/SlideOverPanel';
 import { ConnectionGuide } from '@/components/ConnectionGuide';
-import { EnvironmentsList } from '@/components/EnvironmentsList';
 import { MultiAgentHeader, type ConnectedAgent } from '@/components/MultiAgentHeader';
 import { LoadingView } from './LoadingView';
 import { NoConnectionView } from './NoConnectionView';
@@ -76,7 +75,6 @@ export function HomeContent() {
 
   // Slide-over panel states
   const [guideOpen, setGuideOpen] = useState(false);
-  const [environmentsOpen, setEnvironmentsOpen] = useState(false);
   const [unifiedManagerOpen, setUnifiedManagerOpen] = useState(false);
 
   // Create agent status and session count maps for UnifiedAgentManager
@@ -174,7 +172,6 @@ export function HomeContent() {
           onSelectSession={handleSelectSession}
           onNewSession={() => setNewSessionOpen(true)}
           onOpenGuide={() => setGuideOpen(true)}
-          onOpenEnvironments={() => setEnvironmentsOpen(true)}
           onConnectionSettingsClick={() => setUnifiedManagerOpen(true)}
           onSessionKilled={handleSessionKilled}
         />
@@ -190,7 +187,6 @@ export function HomeContent() {
           onDisconnectAgent={handleConnectionRemoved}
           onNewSession={() => setNewSessionOpen(true)}
           onOpenGuide={() => setGuideOpen(true)}
-          onOpenEnvironments={() => setEnvironmentsOpen(true)}
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
           isMobile={false}
@@ -272,15 +268,6 @@ export function HomeContent() {
       {/* Guide Slide-Over Panel */}
       <SlideOverPanel open={guideOpen} onClose={() => setGuideOpen(false)} title="Connection Guide">
         <ConnectionGuide />
-      </SlideOverPanel>
-
-      {/* Environments Slide-Over Panel */}
-      <SlideOverPanel
-        open={environmentsOpen}
-        onClose={() => setEnvironmentsOpen(false)}
-        title="Environments"
-      >
-        <EnvironmentsList machines={machines} />
       </SlideOverPanel>
 
       {/* PWA Install Banner - only on mobile */}

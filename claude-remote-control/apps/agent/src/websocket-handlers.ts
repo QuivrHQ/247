@@ -21,13 +21,6 @@ function tmuxSessionExists(sessionName: string): boolean {
   }
 }
 import {
-  getEnvironmentVariables,
-  getEnvironmentMetadata,
-  setSessionEnvironment,
-  clearSessionEnvironment,
-  getSessionEnvironment,
-} from './db/environments.js';
-import {
   tmuxSessionStatus,
   activeConnections,
   statusSubscribers,
@@ -50,7 +43,6 @@ import { triggerUpdate, isUpdateInProgress } from './updater.js';
 export function handleTerminalConnection(ws: WebSocket, url: URL): void {
   const project = url.searchParams.get('project');
   const urlSessionName = url.searchParams.get('session');
-  const environmentId = url.searchParams.get('environment');
   const createFlag = url.searchParams.get('create') === 'true';
   const useWorktree = url.searchParams.get('worktree') === 'true';
   const branchName = url.searchParams.get('branch') || undefined;
@@ -104,8 +96,6 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
       return;
     }
 
-    const envVars = getEnvironmentVariables(environmentId || undefined);
-
     // Check if session exists before attempting to create/connect
     const sessionExists = tmuxSessionExists(sessionName);
 
@@ -158,16 +148,10 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
     // Create terminal
     let terminal;
     try {
-      terminal = createTerminal(terminalCwd, sessionName, {
-        customEnvVars: envVars,
-      });
+      terminal = createTerminal(terminalCwd, sessionName, {});
       terminalRef = terminal; // Store reference for early message handler
-      if (environmentId) {
-        setSessionEnvironment(sessionName, environmentId);
-      }
     } catch (err) {
       console.error('Failed to create terminal:', err);
-      clearSessionEnvironment(sessionName);
       // Cleanup worktree on failure
       if (worktreePath) {
         await worktreeManager.remove(projectPath, worktreePath).catch(() => {});
@@ -211,7 +195,6 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
           lastEvent: 'SessionCreated',
           lastActivity: now,
           lastStatusChange: now,
-          environmentId: environmentId || undefined,
           worktreePath: worktreePath || undefined,
           branchName: worktreeBranch || undefined,
         });
@@ -228,7 +211,6 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
         project: project!,
       });
 
-      const envMeta = environmentId ? getEnvironmentMetadata(environmentId) : undefined;
       broadcastStatusUpdate({
         name: sessionName,
         project: project!,
@@ -238,16 +220,6 @@ export function handleTerminalConnection(ws: WebSocket, url: URL): void {
         lastStatusChange: now,
         createdAt,
         lastActivity: undefined,
-        environmentId: environmentId || undefined,
-        environment: envMeta
-          ? {
-              id: envMeta.id,
-              name: envMeta.name,
-              provider: envMeta.provider,
-              icon: envMeta.icon,
-              isDefault: envMeta.isDefault,
-            }
-          : undefined,
       });
     }
 
@@ -431,9 +403,6 @@ export function handleStatusConnection(ws: WebSocket, url?: URL): void {
           lastStatusChange = hookData.lastStatusChange;
         }
 
-        const envId = getSessionEnvironment(name);
-        const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
         sessions.push({
           name,
           project,
@@ -444,16 +413,6 @@ export function handleStatusConnection(ws: WebSocket, url?: URL): void {
           lastActivity: hookData?.lastActivity,
           lastEvent,
           lastStatusChange,
-          environmentId: envId,
-          environment: envMeta
-            ? {
-                id: envMeta.id,
-                name: envMeta.name,
-                provider: envMeta.provider,
-                icon: envMeta.icon,
-                isDefault: envMeta.isDefault,
-              }
-            : undefined,
           // StatusLine metrics
           model: hookData?.model,
           costUsd: hookData?.costUsd,

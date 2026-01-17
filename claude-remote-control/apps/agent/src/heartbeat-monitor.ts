@@ -15,7 +15,6 @@
 import { lastHeartbeat } from './routes/heartbeat.js';
 import { tmuxSessionStatus, broadcastStatusUpdate } from './status.js';
 import * as sessionsDb from './db/sessions.js';
-import { getEnvironmentMetadata, getSessionEnvironment } from './db/environments.js';
 
 // Timeout threshold: if no heartbeat for 3 seconds, Claude has stopped working
 // Note: "needs_attention" is now handled by the Notification hook, not timeout
@@ -65,10 +64,6 @@ export function startHeartbeatMonitor(): void {
           lastStatusChange: now,
         });
 
-        // Get environment info for broadcast
-        const envId = getSessionEnvironment(sessionName);
-        const envMeta = envId ? getEnvironmentMetadata(envId) : undefined;
-
         // Get actual createdAt from database to prevent card reordering
         const dbSession = sessionsDb.getSession(sessionName);
 
@@ -82,16 +77,6 @@ export function startHeartbeatMonitor(): void {
           lastStatusChange: now,
           createdAt: dbSession?.created_at || status.lastActivity || now,
           lastActivity: status.lastActivity,
-          environmentId: envId,
-          environment: envMeta
-            ? {
-                id: envMeta.id,
-                name: envMeta.name,
-                provider: envMeta.provider,
-                icon: envMeta.icon,
-                isDefault: envMeta.isDefault,
-              }
-            : undefined,
           model: status.model,
           costUsd: status.costUsd,
           contextUsage: status.contextUsage,

@@ -5,11 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import { useFolders, useClone } from './hooks';
+import { useFolders } from './hooks';
 import { MachineSelector } from './MachineSelector';
-import { TabButtons, type TabType } from './TabButtons';
 import { SelectFolderTab } from './SelectFolderTab';
-import { CloneRepoTab } from './CloneRepoTab';
 
 interface Machine {
   id: string;
@@ -35,34 +33,17 @@ export function NewSessionModal({
   onStartSession,
 }: NewSessionModalProps) {
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('select');
 
   // Custom hooks
-  const { folders, selectedProject, setSelectedProject, loadingFolders, addFolder } =
+  const { folders, selectedProject, setSelectedProject, loadingFolders } =
     useFolders(selectedMachine);
-  const clone = useClone(selectedMachine);
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setSelectedMachine(null);
-      setActiveTab('select');
-      clone.resetCloneState();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  // Handle clone with folder update
-  const handleClone = async () => {
-    const projectName = await clone.handleClone();
-    if (projectName) {
-      addFolder(projectName);
-      setTimeout(() => {
-        setActiveTab('select');
-        clone.resetCloneState();
-      }, 1500);
-    }
-  };
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -70,12 +51,12 @@ export function NewSessionModal({
       if (e.key === 'Escape') {
         onOpenChange(false);
       }
-      if (e.key === 'Enter' && selectedMachine && selectedProject && activeTab === 'select') {
+      if (e.key === 'Enter' && selectedMachine && selectedProject) {
         onStartSession(selectedMachine.id, selectedProject);
         onOpenChange(false);
       }
     },
-    [onOpenChange, onStartSession, selectedMachine, selectedProject, activeTab]
+    [onOpenChange, onStartSession, selectedMachine, selectedProject]
   );
 
   useEffect(() => {
@@ -151,60 +132,40 @@ export function NewSessionModal({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <TabButtons activeTab={activeTab} onTabChange={setActiveTab} />
-
-                  {activeTab === 'select' && (
-                    <SelectFolderTab
-                      folders={folders}
-                      selectedProject={selectedProject}
-                      onSelectProject={setSelectedProject}
-                      loadingFolders={loadingFolders}
-                    />
-                  )}
-
-                  {activeTab === 'clone' && (
-                    <CloneRepoTab
-                      repoUrl={clone.repoUrl}
-                      onRepoUrlChange={clone.setRepoUrl}
-                      customProjectName={clone.customProjectName}
-                      onCustomProjectNameChange={clone.setCustomProjectName}
-                      previewedName={clone.previewedName}
-                      cloning={clone.cloning}
-                      cloneError={clone.cloneError}
-                      cloneSuccess={clone.cloneSuccess}
-                      onClone={handleClone}
-                    />
-                  )}
+                  <SelectFolderTab
+                    folders={folders}
+                    selectedProject={selectedProject}
+                    onSelectProject={setSelectedProject}
+                    loadingFolders={loadingFolders}
+                  />
                 </motion.div>
               )}
             </div>
 
             {/* Footer */}
-            {activeTab === 'select' && (
-              <div className="flex flex-none items-center justify-between border-t border-white/5 px-6 py-4">
-                <p className="text-xs text-white/30">
-                  Press{' '}
-                  <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-white/50">
-                    Enter
-                  </kbd>{' '}
-                  to start
-                </p>
-                <button
-                  onClick={handleStartSession}
-                  disabled={!selectedMachine || !selectedProject}
-                  className={cn(
-                    'touch-manipulation active:scale-[0.98]',
-                    'flex items-center gap-2 rounded-xl px-5 py-2.5 font-medium transition-all',
-                    selectedMachine && selectedProject
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-400 hover:to-amber-400'
-                      : 'cursor-not-allowed bg-white/5 text-white/30'
-                  )}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Start Session
-                </button>
-              </div>
-            )}
+            <div className="flex flex-none items-center justify-between border-t border-white/5 px-6 py-4">
+              <p className="text-xs text-white/30">
+                Press{' '}
+                <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-white/50">
+                  Enter
+                </kbd>{' '}
+                to start
+              </p>
+              <button
+                onClick={handleStartSession}
+                disabled={!selectedMachine || !selectedProject}
+                className={cn(
+                  'touch-manipulation active:scale-[0.98]',
+                  'flex items-center gap-2 rounded-xl px-5 py-2.5 font-medium transition-all',
+                  selectedMachine && selectedProject
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-400 hover:to-amber-400'
+                    : 'cursor-not-allowed bg-white/5 text-white/30'
+                )}
+              >
+                <Sparkles className="h-4 w-4" />
+                Start Session
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       )}

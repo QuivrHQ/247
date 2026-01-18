@@ -352,7 +352,6 @@ export function useTerminalConnection({
       // Read create flag from browser URL to determine if this is a new session creation
       const urlParams = new URLSearchParams(window.location.search);
       const isNewSession = urlParams.get('create') === 'true';
-      const useWorktree = urlParams.get('worktree') === 'true';
 
       let wsUrl = buildWebSocketUrl(
         agentUrl,
@@ -360,7 +359,6 @@ export function useTerminalConnection({
       );
       if (environmentId) wsUrl += `&environment=${encodeURIComponent(environmentId)}`;
       if (isNewSession) wsUrl += '&create=true';
-      if (useWorktree) wsUrl += '&worktree=true';
       if (planningProjectId) wsUrl += `&planningProjectId=${encodeURIComponent(planningProjectId)}`;
 
       ws = new WebSocket(wsUrl);
@@ -423,9 +421,9 @@ export function useTerminalConnection({
         reconnectDelayRef.current = WS_RECONNECT_BASE_DELAY;
 
         if (!isReconnectRef.current) {
-          currentTerm.write('\x1b[38;5;245m┌─ Connected to ' + agentUrl + ' ─┐\x1b[0m\r\n\r\n');
+          currentTerm.write('\x1b[38;5;245m-- Connected to ' + agentUrl + ' --\x1b[0m\r\n\r\n');
         } else {
-          currentTerm.write('\x1b[38;5;245m┌─ Reconnected ─┐\x1b[0m\r\n');
+          currentTerm.write('\x1b[38;5;245m-- Reconnected --\x1b[0m\r\n');
         }
 
         currentWs.send(
@@ -471,12 +469,12 @@ export function useTerminalConnection({
 
         if (intentionalCloseRef.current) {
           setConnectionState('disconnected');
-          currentTerm.write('\r\n\x1b[38;5;245m└─ Disconnected ─┘\x1b[0m\r\n');
+          currentTerm.write('\r\n\x1b[38;5;245m-- Disconnected --\x1b[0m\r\n');
           return;
         }
 
         setConnectionState('disconnected');
-        currentTerm.write('\r\n\x1b[38;5;245m└─ Disconnected ─┘\x1b[0m\r\n');
+        currentTerm.write('\r\n\x1b[38;5;245m-- Disconnected --\x1b[0m\r\n');
 
         const currentDelay = reconnectDelayRef.current;
         reconnectDelayRef.current = Math.min(currentDelay * 2, WS_RECONNECT_MAX_DELAY);
@@ -505,7 +503,7 @@ export function useTerminalConnection({
       currentWs.onerror = (err) => {
         if (cancelled) return;
         console.error('WebSocket error:', err);
-        currentTerm.write('\r\n\x1b[31m✗ Connection error\x1b[0m\r\n');
+        currentTerm.write('\r\n\x1b[31m* Connection error\x1b[0m\r\n');
       };
 
       currentTerm.onData((data) => {

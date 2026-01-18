@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, X, Archive, DollarSign, Code } from 'lucide-react';
+import { Clock, X, Archive, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/time';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -142,14 +142,6 @@ export function SessionMiniCard({
                 <span className="flex items-center gap-0.5 text-emerald-400/60">
                   <DollarSign className="h-2.5 w-2.5" />
                   {session.costUsd < 0.01 ? '<0.01' : session.costUsd.toFixed(2)}
-                </span>
-              )}
-              {/* Lines changed */}
-              {(session.linesAdded !== undefined || session.linesRemoved !== undefined) && (
-                <span className="flex items-center gap-1">
-                  <Code className="h-2.5 w-2.5" />
-                  <span className="text-green-400/60">+{session.linesAdded || 0}</span>
-                  <span className="text-red-400/60">-{session.linesRemoved || 0}</span>
                 </span>
               )}
             </div>

@@ -16,7 +16,6 @@ interface SessionSidebarProps {
   onSelectSession: (sessionName: string | null, project: string) => void;
   onNewSession: (project: string) => void;
   onSessionKilled?: () => void;
-  onCreatePR?: (session: SessionInfo) => void;
   agentUrl: string;
 }
 
@@ -28,7 +27,6 @@ export function SessionSidebar({
   onSelectSession,
   onNewSession,
   onSessionKilled,
-  onCreatePR,
   agentUrl,
 }: SessionSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -59,29 +57,6 @@ export function SessionSidebar({
       }
     },
     [agentUrl, currentSessionName, onSessionKilled]
-  );
-
-  // Push branch handler
-  const handlePushBranch = useCallback(
-    async (session: SessionInfo) => {
-      try {
-        const response = await fetch(
-          buildApiUrl(agentUrl, `/api/sessions/${encodeURIComponent(session.name)}/push`),
-          { method: 'POST' }
-        );
-
-        const data = await response.json();
-        if (response.ok) {
-          toast.success(`Branch pushed: ${data.branch}`);
-        } else {
-          toast.error(data.error || 'Failed to push branch');
-        }
-      } catch (err) {
-        console.error('Failed to push branch:', err);
-        toast.error('Could not connect to agent');
-      }
-    },
-    [agentUrl]
   );
 
   // Filter and sort sessions
@@ -230,7 +205,7 @@ export function SessionSidebar({
               'active:scale-[0.98]',
               isCollapsed && 'px-0'
             )}
-            title={isCollapsed ? 'New Session (⌘N)' : undefined}
+            title={isCollapsed ? 'New Session (Cmd+N)' : undefined}
           >
             <Plus className="h-4 w-4" />
             {!isCollapsed && <span>New Session</span>}
@@ -256,12 +231,6 @@ export function SessionSidebar({
                   index={index}
                   onClick={() => onSelectSession(session.name, session.project)}
                   onKill={() => handleKillSession(session.name)}
-                  onPushBranch={session.worktreePath ? () => handlePushBranch(session) : undefined}
-                  onCreatePR={
-                    session.worktreePath && onCreatePR ? () => onCreatePR(session) : undefined
-                  }
-                  hasWorktree={!!session.worktreePath}
-                  branchName={session.branchName}
                 />
               </motion.div>
             ))}
@@ -324,12 +293,12 @@ export function SessionSidebar({
               </div>
 
               <div className="space-y-4">
-                <ShortcutRow keys={['⌘', 'N']} description="Create new session" />
-                <ShortcutRow keys={['⌥', '1-9']} description="Switch to session 1-9" />
-                <ShortcutRow keys={['⌥', '[']} description="Previous session" />
-                <ShortcutRow keys={['⌥', ']']} description="Next session" />
-                <ShortcutRow keys={['⌥', 'T']} description="Terminal tab" />
-                <ShortcutRow keys={['⌥', 'E']} description="Editor tab" />
+                <ShortcutRow keys={['Cmd', 'N']} description="Create new session" />
+                <ShortcutRow keys={['Alt', '1-9']} description="Switch to session 1-9" />
+                <ShortcutRow keys={['Alt', '[']} description="Previous session" />
+                <ShortcutRow keys={['Alt', ']']} description="Next session" />
+                <ShortcutRow keys={['Alt', 'T']} description="Terminal tab" />
+                <ShortcutRow keys={['Alt', 'E']} description="Editor tab" />
                 <ShortcutRow keys={['?']} description="Show this help" />
               </div>
             </motion.div>

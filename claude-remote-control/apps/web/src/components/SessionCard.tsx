@@ -2,17 +2,7 @@
 
 import { forwardRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Clock,
-  Circle,
-  X,
-  Archive,
-  DollarSign,
-  Code,
-  GitBranch,
-  GitPullRequest,
-  Loader2,
-} from 'lucide-react';
+import { Clock, Circle, X, Archive, DollarSign } from 'lucide-react';
 import { type SessionInfo } from '@/lib/types';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import { cn } from '@/lib/utils';
@@ -26,39 +16,19 @@ interface SessionCardProps {
   onClick: () => void;
   onKill?: () => Promise<void>;
   onArchive?: () => Promise<void>;
-  onPushBranch?: () => Promise<void>;
-  onCreatePR?: () => void;
-  /** Session has a worktree with a branch */
-  hasWorktree?: boolean;
-  /** Branch name for display */
-  branchName?: string;
   /** Mobile mode - larger touch targets */
   isMobile?: boolean;
 }
 
 export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
   (
-    {
-      session,
-      isActive,
-      isCollapsed,
-      index,
-      onClick,
-      onKill,
-      onArchive,
-      onPushBranch,
-      onCreatePR,
-      hasWorktree,
-      branchName,
-      isMobile = false,
-    },
+    { session, isActive, isCollapsed, index, onClick, onKill, onArchive, isMobile = false },
     ref
   ) => {
     const [showKillConfirm, setShowKillConfirm] = useState(false);
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
     const [isKilling, setIsKilling] = useState(false);
     const [isArchiving, setIsArchiving] = useState(false);
-    const [isPushing, setIsPushing] = useState(false);
     const [, setTick] = useState(0);
 
     // Update time display every 10 seconds
@@ -101,22 +71,6 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
       } finally {
         setIsArchiving(false);
       }
-    };
-
-    const handlePushClick = async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!onPushBranch || isPushing) return;
-      setIsPushing(true);
-      try {
-        await onPushBranch();
-      } finally {
-        setIsPushing(false);
-      }
-    };
-
-    const handleCreatePRClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onCreatePR?.();
     };
 
     if (isCollapsed) {
@@ -203,47 +157,6 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
               isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             )}
           >
-            {/* Git buttons - only show for worktree sessions */}
-            {hasWorktree && (
-              <>
-                {/* Push branch button */}
-                {onPushBranch && (
-                  <button
-                    onClick={handlePushClick}
-                    disabled={isPushing}
-                    className={cn(
-                      'rounded-lg',
-                      'bg-transparent text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300',
-                      'touch-manipulation transition-all',
-                      'disabled:cursor-not-allowed disabled:opacity-50',
-                      isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-1.5'
-                    )}
-                    title={branchName ? `Push ${branchName}` : 'Push branch'}
-                  >
-                    {isPushing ? (
-                      <Loader2 className={cn('animate-spin', isMobile ? 'h-5 w-5' : 'h-4 w-4')} />
-                    ) : (
-                      <GitBranch className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
-                    )}
-                  </button>
-                )}
-                {/* Create PR button */}
-                {onCreatePR && (
-                  <button
-                    onClick={handleCreatePRClick}
-                    className={cn(
-                      'rounded-lg',
-                      'bg-transparent text-purple-400 hover:bg-purple-500/20 hover:text-purple-300',
-                      'touch-manipulation transition-all',
-                      isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-1.5'
-                    )}
-                    title="Create Pull Request"
-                  >
-                    <GitPullRequest className={isMobile ? 'h-5 w-5' : 'h-4 w-4'} />
-                  </button>
-                )}
-              </>
-            )}
             {/* Archive button */}
             {onArchive && (
               <button
@@ -325,43 +238,19 @@ export const SessionCard = forwardRef<HTMLButtonElement, SessionCardProps>(
                   <Clock className="h-3 w-3" />
                   <span>{formatRelativeTime(session.createdAt)}</span>
                 </div>
-                {branchName && (
-                  <span
-                    className="flex items-center gap-1 text-cyan-400/60"
-                    title={`Branch: ${branchName}`}
-                  >
-                    <GitBranch className="h-3 w-3" />
-                    <span className="max-w-[100px] truncate text-xs">{branchName}</span>
-                  </span>
-                )}
               </div>
 
               {/* StatusLine metrics */}
-              {(session.costUsd !== undefined ||
-                session.linesAdded !== undefined ||
-                session.linesRemoved !== undefined) && (
+              {session.costUsd !== undefined && (
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   {/* Cost */}
-                  {session.costUsd !== undefined && (
-                    <span
-                      className="flex items-center gap-1 text-emerald-400/70"
-                      title="Session cost"
-                    >
-                      <DollarSign className="h-3 w-3" />
-                      {session.costUsd < 0.01 ? '<$0.01' : `$${session.costUsd.toFixed(2)}`}
-                    </span>
-                  )}
-                  {/* Lines changed */}
-                  {(session.linesAdded !== undefined || session.linesRemoved !== undefined) && (
-                    <span
-                      className="flex items-center gap-1 text-white/40"
-                      title="Lines of code changed"
-                    >
-                      <Code className="h-3 w-3" />
-                      <span className="text-green-400/70">+{session.linesAdded || 0}</span>
-                      <span className="text-red-400/70">-{session.linesRemoved || 0}</span>
-                    </span>
-                  )}
+                  <span
+                    className="flex items-center gap-1 text-emerald-400/70"
+                    title="Session cost"
+                  >
+                    <DollarSign className="h-3 w-3" />
+                    {session.costUsd < 0.01 ? '<$0.01' : `$${session.costUsd.toFixed(2)}`}
+                  </span>
                   {/* Model name */}
                   {session.model && (
                     <span className="text-white/30" title="Model">

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search, Zap, Keyboard, X, Archive, Download, Share } from 'lucide-react';
 import { toast } from 'sonner';
 import { ControlPanelHeader, SessionModule } from './desktop';
-import { CreatePRModal } from './CreatePRModal';
 import { type SessionWithMachine } from '@/contexts/SessionPollingContext';
 import { type SessionInfo } from '@/lib/types';
 import { cn, buildApiUrl } from '@/lib/utils';
@@ -51,8 +50,6 @@ export function HomeSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
-  const [prModalOpen, setPrModalOpen] = useState(false);
-  const [prModalSession, setPrModalSession] = useState<SessionWithMachine | null>(null);
 
   // Kill session handler
   const handleKillSession = useCallback(
@@ -108,32 +105,6 @@ export function HomeSidebar({
     },
     [selectedSession, onSessionArchived]
   );
-
-  // Push branch handler
-  const handlePushBranch = useCallback(async (session: SessionWithMachine) => {
-    try {
-      const response = await fetch(
-        buildApiUrl(session.agentUrl, `/api/sessions/${encodeURIComponent(session.name)}/push`),
-        { method: 'POST' }
-      );
-
-      const data = await response.json();
-      if (response.ok) {
-        toast.success(`Branch pushed: ${data.branch}`);
-      } else {
-        toast.error(data.error || 'Failed to push branch');
-      }
-    } catch (err) {
-      console.error('Failed to push branch:', err);
-      toast.error('Could not connect to agent');
-    }
-  }, []);
-
-  // Create PR handler
-  const handleCreatePR = useCallback((session: SessionWithMachine) => {
-    setPrModalSession(session);
-    setPrModalOpen(true);
-  }, []);
 
   // Filter and sort sessions
   const filteredSessions = useMemo(() => {
@@ -301,8 +272,6 @@ export function HomeSidebar({
                   }
                   onKill={() => handleKillSession(session)}
                   onArchive={() => handleArchiveSession(session)}
-                  onPushBranch={session.worktreePath ? () => handlePushBranch(session) : undefined}
-                  onCreatePR={session.worktreePath ? () => handleCreatePR(session) : undefined}
                 />
               </motion.div>
             ))}
@@ -471,24 +440,16 @@ export function HomeSidebar({
               </div>
 
               <div className="space-y-4">
-                <ShortcutRow keys={['⌘', 'K']} description="New session" />
-                <ShortcutRow keys={['⌥', '1-9']} description="Switch to session 1-9" />
-                <ShortcutRow keys={['⌥', '[']} description="Previous session" />
-                <ShortcutRow keys={['⌥', ']']} description="Next session" />
+                <ShortcutRow keys={['Cmd', 'K']} description="New session" />
+                <ShortcutRow keys={['Alt', '1-9']} description="Switch to session 1-9" />
+                <ShortcutRow keys={['Alt', '[']} description="Previous session" />
+                <ShortcutRow keys={['Alt', ']']} description="Next session" />
                 <ShortcutRow keys={['?']} description="Show this help" />
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Create PR Modal */}
-      <CreatePRModal
-        open={prModalOpen}
-        onOpenChange={setPrModalOpen}
-        session={prModalSession as SessionInfo | null}
-        agentUrl={prModalSession?.agentUrl || ''}
-      />
     </>
   );
 }

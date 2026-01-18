@@ -63,6 +63,9 @@ jobs:
 
       - name: Build packages
         run: pnpm build
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          NEON_AUTH_BASE_URL: https://auth.example.com
 
       # Run unit tests first (fast feedback)
       - name: Run unit tests

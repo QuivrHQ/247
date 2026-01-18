@@ -80,10 +80,6 @@ export function useTerminalConnection({
     }
   }, [onCopySuccess]);
 
-  const hasSelection = useCallback(() => {
-    return xtermRef.current?.hasSelection() ?? false;
-  }, []);
-
   const startClaude = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'start-claude' }));
@@ -157,10 +153,6 @@ export function useTerminalConnection({
         cursorWidth: 2,
         allowProposedApi: true,
         theme: TERMINAL_THEME,
-        // Enable screen reader mode on mobile for text selection via accessibility layer
-        // This creates a DOM overlay with real selectable text that can be selected natively
-        // See: https://github.com/xtermjs/xterm.js/issues/3727
-        screenReaderMode: isMobile,
       });
 
       const fitAddon = new FitAddon();
@@ -742,7 +734,6 @@ export function useTerminalConnection({
     searchAddonRef,
     scrollToBottom,
     copySelection,
-    hasSelection,
     startClaude,
     sendInput,
     scrollTerminal,

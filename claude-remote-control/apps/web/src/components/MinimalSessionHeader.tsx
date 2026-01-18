@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Sparkles, Copy, Check, ArrowLeft, DollarSign } from 'lucide-react';
+import { Search, Sparkles, Copy, Check, ArrowLeft, DollarSign, ClipboardPaste } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MinimalSessionHeaderProps {
@@ -13,6 +13,7 @@ interface MinimalSessionHeaderProps {
   onMenuClick: () => void;
   onStartClaude: () => void;
   onCopySelection: () => void;
+  onPaste?: () => void;
   onToggleSearch: () => void;
   // StatusLine metrics
   model?: string;
@@ -33,6 +34,7 @@ export function MinimalSessionHeader({
   onMenuClick,
   onStartClaude,
   onCopySelection,
+  onPaste,
   onToggleSearch,
   model,
   costUsd,
@@ -75,6 +77,17 @@ export function MinimalSessionHeader({
         >
           {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
         </button>
+
+        {/* Paste Button */}
+        {onPaste && (
+          <button
+            onClick={onPaste}
+            className="flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/5 hover:text-white"
+            title="Paste from clipboard"
+          >
+            <ClipboardPaste className="h-4 w-4" />
+          </button>
+        )}
 
         {/* Search Button */}
         <button

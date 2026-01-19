@@ -39,7 +39,8 @@
     "react-dom": "^19.0.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
@@ -47,6 +48,7 @@
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.0",
     "drizzle-kit": "^0.31.8",
     "happy-dom": "^20.0.11",

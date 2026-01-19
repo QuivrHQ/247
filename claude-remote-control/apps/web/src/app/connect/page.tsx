@@ -140,6 +140,7 @@ function ConnectContent() {
         body: JSON.stringify({
           url: agentInfo.agentUrl,
           name: agentInfo.machineName,
+          machineId: agentInfo.machineId,
           method: agentInfo.agentUrl.includes('.ts.net') ? 'tailscale' : 'custom',
         }),
       });

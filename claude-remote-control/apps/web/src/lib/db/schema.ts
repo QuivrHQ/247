@@ -7,6 +7,7 @@ export const agentConnection = pgTable(
   {
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(), // References neon_auth.user.id
+    machineId: text('machine_id'), // Agent's machine UUID for push notifications lookup
     url: text('url').notNull(),
     name: text('name').notNull(),
     method: text('method').notNull().default('tailscale'),
@@ -15,7 +16,10 @@ export const agentConnection = pgTable(
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
-  (table) => [index('idx_agent_connection_user').on(table.userId)]
+  (table) => [
+    index('idx_agent_connection_user').on(table.userId),
+    index('idx_agent_connection_machine').on(table.machineId),
+  ]
 );
 
 export type AgentConnection = typeof agentConnection.$inferSelect;
@@ -41,3 +45,24 @@ export const userSettings = pgTable(
 
 export type UserSetting = typeof userSettings.$inferSelect;
 export type NewUserSetting = typeof userSettings.$inferInsert;
+
+// Push notification subscriptions for PWA background notifications
+export const pushSubscription = pgTable(
+  'push_subscription',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(), // References neon_auth.user.id
+    endpoint: text('endpoint').notNull(), // Push service endpoint URL
+    p256dh: text('p256dh').notNull(), // Public key for encryption
+    auth: text('auth').notNull(), // Auth secret
+    userAgent: text('user_agent'), // Browser/device info
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => [
+    index('idx_push_subscription_user').on(table.userId),
+    uniqueIndex('idx_push_subscription_endpoint').on(table.endpoint),
+  ]
+);
+
+export type PushSubscription = typeof pushSubscription.$inferSelect;
+export type NewPushSubscription = typeof pushSubscription.$inferInsert;

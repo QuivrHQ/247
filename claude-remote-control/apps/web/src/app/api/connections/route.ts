@@ -40,6 +40,7 @@ export async function POST(req: Request) {
         userId: user.id,
         url: body.url,
         name: body.name,
+        machineId: body.machineId,
         method: body.method || 'tailscale',
       })
       .returning();

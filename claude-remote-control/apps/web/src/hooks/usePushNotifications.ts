@@ -47,26 +47,24 @@ export function usePushNotifications() {
 
       const permission = Notification.permission;
 
-      // Check if service worker is registered (with timeout for dev mode)
+      // Check if there's already a service worker controller
+      const hasController = !!navigator.serviceWorker.controller;
+
+      if (!hasController) {
+        // No active service worker (probably dev mode) - still allow notifications
+        setState({
+          isSupported: true,
+          isSubscribed: false,
+          permission,
+          isLoading: false,
+          error: null,
+        });
+        return;
+      }
+
+      // Service worker exists, check subscription
       try {
-        // Wait for service worker with 3s timeout
-        const registration = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
-        ]);
-
-        if (!registration) {
-          // No service worker registered (probably dev mode)
-          setState({
-            isSupported: true,
-            isSubscribed: false,
-            permission,
-            isLoading: false,
-            error: null,
-          });
-          return;
-        }
-
+        const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
         setState({
           isSupported: true,
@@ -77,13 +75,13 @@ export function usePushNotifications() {
         });
       } catch (error) {
         console.error('[Push] Error checking subscription:', error);
-        setState((s) => ({
-          ...s,
+        setState({
           isSupported: true,
+          isSubscribed: false,
           permission,
           isLoading: false,
           error: 'Failed to check subscription status',
-        }));
+        });
       }
     };
 

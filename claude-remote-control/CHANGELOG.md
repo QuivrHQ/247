@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.30.0] - 2026-01-19
+
+### Features
+
+- **web**: add push notification subscribe button in header (0925920)
+
+### Bug Fixes
+
+- **web**: add push notification button to correct header (MultiAgentHeader) (fd8b2da)
+
 ## [2.29.0] - 2026-01-19
 
 ### Features

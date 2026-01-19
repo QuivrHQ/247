@@ -21,6 +21,7 @@ import {
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PushNotificationButton } from '@/components/PushNotificationButton';
 import { authClient } from '@/lib/auth-client';
 import React from 'react';
 
@@ -736,6 +737,7 @@ export function MultiAgentHeader({
                     <Settings className="h-4 w-4" />
                   </button>
                 )}
+                <PushNotificationButton />
                 {onToggleFullscreen && (
                   <button
                     onClick={onToggleFullscreen}
@@ -752,6 +754,9 @@ export function MultiAgentHeader({
                 <div className="mx-1 h-4 w-px bg-white/10" />
               </>
             )}
+
+            {/* Mobile: Push notification button */}
+            {isMobile && <PushNotificationButton isMobile />}
 
             {/* New session button */}
             <button

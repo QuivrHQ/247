@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.36.1] - 2026-01-20
+
+### Bug Fixes
+
+- **agent**: detect user shell from /etc/passwd when SHELL env is unset (a79a817)
+
+### Refactoring
+
+- remove dead code and unused exports (5b27655)
+
+### Chores
+
+- ignore .claude directories (5e50c7b)
+
 ## [2.36.0] - 2026-01-20
 
 ### Features

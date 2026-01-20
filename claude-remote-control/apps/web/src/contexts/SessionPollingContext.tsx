@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { SessionInfo, SessionWithMachine } from '@/lib/types';
 import { buildWebSocketUrl, buildApiUrl } from '@/lib/utils';
-import { requestNotificationPermission, showBrowserNotification } from '@/lib/notifications';
+import { requestNotificationPermission, showInAppToast } from '@/lib/notifications';
 import type { WSSessionsMessageFromAgent } from '247-shared';
 
 export interface Machine {
@@ -347,12 +347,13 @@ export function SessionPollingProvider({ children }: { children: ReactNode }) {
                   }
                   return next;
                 });
-                // Trigger browser notification for needs_attention (except task_complete)
+                // Trigger in-app toast for needs_attention (except task_complete)
+                // Since WebSocket messages are only received when app is open, use toast instead of browser notification
                 if (
                   msg.session.status === 'needs_attention' &&
                   msg.session.attentionReason !== 'task_complete'
                 ) {
-                  showBrowserNotification(msg.session.project, msg.session.attentionReason);
+                  showInAppToast(msg.session.project, msg.session.attentionReason);
                 }
                 break;
             }

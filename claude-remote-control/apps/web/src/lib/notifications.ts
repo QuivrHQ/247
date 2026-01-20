@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 // Map attention reason to notification body (front-end decides how to display)
 const REASON_LABELS: Record<string, string> = {
   // Claude Code notification_type values
@@ -48,4 +50,18 @@ export function showBrowserNotification(project: string, reason?: string): void 
   });
 
   console.log('[Notifications] Notification created successfully');
+}
+
+/**
+ * Show an in-app toast notification.
+ * Used when the app is in the foreground to avoid showing system notifications.
+ */
+export function showInAppToast(project: string, reason?: string): void {
+  const title = `Claude - ${project}`;
+  const body = reason ? REASON_LABELS[reason] || `Attention: ${reason}` : 'Attention requise';
+
+  toast(title, {
+    description: body,
+    duration: 6000,
+  });
 }

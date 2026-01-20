@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useNotificationDeeplink } from '@/hooks/useNotificationDeeplink';
+import { useInAppNotifications } from '@/hooks/useInAppNotifications';
 import { useSessionPolling } from '@/contexts/SessionPollingContext';
 
 export function HomeContent() {
@@ -29,6 +30,9 @@ export function HomeContent() {
 
   // Handle notification deep links (iOS PWA fallback)
   useNotificationDeeplink();
+
+  // Handle in-app notifications when app is in foreground (from push notifications)
+  useInAppNotifications();
 
   const {
     loading,

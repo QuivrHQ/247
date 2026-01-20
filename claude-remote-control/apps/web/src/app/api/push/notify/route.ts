@@ -10,18 +10,20 @@ import { sendPushNotification } from '@/lib/push';
  * Body:
  * - machineId: string (agent's machine UUID)
  * - sessionName: string (e.g., "project--session-name")
+ * - reason?: string (optional: 'permission', 'input', 'plan_approval', 'task_complete')
  */
+// Reason-specific messages for notification body
+const reasonMessages: Record<string, string> = {
+  permission: 'Permission requise',
+  input: 'Réponse attendue',
+  plan_approval: 'Approbation du plan',
+  task_complete: 'Tâche terminée',
+};
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { machineId, sessionName, reason } = body;
-
-    const reasonMessages: Record<string, string> = {
-      permission: 'Permission requise',
-      input: 'Réponse attendue',
-      plan_approval: 'Approbation du plan',
-      task_complete: 'Tâche terminée',
-    };
 
     if (!machineId) {
       return NextResponse.json({ error: 'machineId required' }, { status: 400 });

@@ -16,6 +16,23 @@ export function useNotificationDeeplink() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Clear app badge when app gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if ('clearAppBadge' in navigator) {
+        (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    // Also clear on initial load if app is already focused
+    if (document.hasFocus()) {
+      handleFocus();
+    }
+
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   // Handle navigation to deeplink URL
   const handleDeeplink = useCallback(
     (url: string) => {

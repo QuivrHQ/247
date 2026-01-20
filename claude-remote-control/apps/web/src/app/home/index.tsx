@@ -55,6 +55,7 @@ export function HomeContent() {
     handleSessionArchived,
     handleConnectionSaved,
     handleConnectionRemoved,
+    handleConnectionEdited,
     handleConnectionCleared,
     clearSessionFromUrl,
   } = useHomeState();
@@ -73,6 +74,7 @@ export function HomeContent() {
       method: conn.method,
       status: machineData?.error ? 'offline' : wsConnected ? 'online' : 'connecting',
       sessionCount: machineData?.sessions?.length ?? 0,
+      color: conn.color,
     };
   });
 
@@ -257,6 +259,7 @@ export function HomeContent() {
         sessionCounts={sessionCountsMap}
         onDisconnectAgent={handleConnectionRemoved}
         onConnectNewAgent={handleConnectionSaved}
+        onEditAgent={handleConnectionEdited}
       />
 
       {/* New Session Modal */}

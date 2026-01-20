@@ -13,6 +13,7 @@ export const agentConnection = pgTable(
     method: text('method').notNull().default('tailscale'),
     isCloud: boolean('is_cloud').default(false),
     cloudAgentId: text('cloud_agent_id'),
+    color: text('color'), // Hex color code, e.g. '#f97316'
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },

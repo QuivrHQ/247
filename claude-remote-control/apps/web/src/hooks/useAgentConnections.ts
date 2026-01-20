@@ -12,17 +12,18 @@ export interface AgentConnection {
   createdAt: number;
   isCloud?: boolean;
   cloudAgentId?: string;
+  color?: string;
 }
 
 export interface UseAgentConnectionsReturn {
   connections: AgentConnection[];
   loading: boolean;
   error: string | null;
-  addConnection: (data: { url: string; name: string; method?: string }) => Promise<AgentConnection>;
+  addConnection: (data: { url: string; name: string; method?: string; color?: string }) => Promise<AgentConnection>;
   removeConnection: (id: string) => Promise<void>;
   updateConnection: (
     id: string,
-    data: { url?: string; name?: string; method?: string }
+    data: { url?: string; name?: string; method?: string; color?: string }
   ) => Promise<AgentConnection>;
   refetch: () => Promise<void>;
 }
@@ -55,6 +56,7 @@ export function useAgentConnections(): UseAgentConnectionsReturn {
           createdAt: c.createdAt ? new Date(c.createdAt as string).getTime() : Date.now(),
           isCloud: c.isCloud as boolean | undefined,
           cloudAgentId: c.cloudAgentId as string | undefined,
+          color: c.color as string | undefined,
         }))
       );
     } catch (err) {
@@ -72,6 +74,7 @@ export function useAgentConnections(): UseAgentConnectionsReturn {
     url: string;
     name: string;
     method?: string;
+    color?: string;
   }): Promise<AgentConnection> => {
     const res = await fetch('/api/connections', {
       method: 'POST',
@@ -92,6 +95,7 @@ export function useAgentConnections(): UseAgentConnectionsReturn {
       createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : Date.now(),
       isCloud: raw.isCloud,
       cloudAgentId: raw.cloudAgentId,
+      color: raw.color,
     };
     setConnections((prev) => [...prev, connection]);
     return connection;
@@ -109,7 +113,7 @@ export function useAgentConnections(): UseAgentConnectionsReturn {
 
   const updateConnection = async (
     id: string,
-    data: { url?: string; name?: string; method?: string }
+    data: { url?: string; name?: string; method?: string; color?: string }
   ): Promise<AgentConnection> => {
     const res = await fetch(`/api/connections/${id}`, {
       method: 'PUT',
@@ -130,6 +134,7 @@ export function useAgentConnections(): UseAgentConnectionsReturn {
       createdAt: raw.createdAt ? new Date(raw.createdAt).getTime() : Date.now(),
       isCloud: raw.isCloud,
       cloudAgentId: raw.cloudAgentId,
+      color: raw.color,
     };
     setConnections((prev) => prev.map((c) => (c.id === id ? connection : c)));
     return connection;

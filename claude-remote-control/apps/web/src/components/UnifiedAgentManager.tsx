@@ -21,9 +21,11 @@ import {
   ChevronDown,
   Info,
   Sparkles,
+  Pencil,
 } from 'lucide-react';
 import { cn, buildWebSocketUrl, stripProtocol } from '@/lib/utils';
 import type { StoredAgentConnection } from './AgentConnectionSettings';
+import { EditAgentModal } from './EditAgentModal';
 
 // ============================================================================
 // TYPES
@@ -37,6 +39,7 @@ interface UnifiedAgentManagerProps {
   sessionCounts: Map<string, number>;
   onDisconnectAgent: (id: string) => void;
   onConnectNewAgent: (connection: Omit<StoredAgentConnection, 'id' | 'createdAt'>) => void;
+  onEditAgent: (id: string, data: { name: string; color?: string }) => Promise<void>;
 }
 
 type ViewState = 'main' | 'add-local' | 'add-tailscale' | 'add-custom';
@@ -88,18 +91,37 @@ function ConnectedAgentCard({
   status,
   sessionCount,
   onDisconnect,
+  onEdit,
   isOnlyAgent,
 }: {
   agent: StoredAgentConnection;
   status: 'online' | 'offline' | 'connecting';
   sessionCount: number;
   onDisconnect: () => void;
+  onEdit: () => void;
   isOnlyAgent: boolean;
 }) {
   const method = agent.method === 'cloud' ? 'custom' : agent.method;
   const methodCfg = methodConfig[method as AgentMethod] || methodConfig.custom;
   const statusCfg = connectionStatusConfig[status];
   const Icon = methodCfg.icon;
+
+  // Use custom color if available, otherwise fall back to method color
+  const hasCustomColor = !!agent.color;
+  const iconBgColor = hasCustomColor
+    ? `${agent.color}26` // 15% opacity in hex
+    : methodCfg.color === 'emerald'
+      ? 'rgba(16, 185, 129, 0.15)'
+      : methodCfg.color === 'blue'
+        ? 'rgba(59, 130, 246, 0.15)'
+        : 'rgba(245, 158, 11, 0.15)';
+  const iconColor = hasCustomColor
+    ? agent.color
+    : methodCfg.color === 'emerald'
+      ? 'rgb(16, 185, 129)'
+      : methodCfg.color === 'blue'
+        ? 'rgb(59, 130, 246)'
+        : 'rgb(245, 158, 11)';
 
   return (
     <motion.div
@@ -113,26 +135,12 @@ function ConnectedAgentCard({
         <div className="relative shrink-0">
           <div
             className="flex h-10 w-10 items-center justify-center rounded-lg"
-            style={{
-              backgroundColor:
-                methodCfg.color === 'emerald'
-                  ? 'rgba(16, 185, 129, 0.15)'
-                  : methodCfg.color === 'blue'
-                    ? 'rgba(59, 130, 246, 0.15)'
-                    : 'rgba(245, 158, 11, 0.15)',
-            }}
+            style={{ backgroundColor: iconBgColor }}
           >
             <Icon
               className="h-5 w-5"
               style={{
-                color:
-                  status === 'online'
-                    ? methodCfg.color === 'emerald'
-                      ? 'rgb(16, 185, 129)'
-                      : methodCfg.color === 'blue'
-                        ? 'rgb(59, 130, 246)'
-                        : 'rgb(245, 158, 11)'
-                    : 'rgba(255, 255, 255, 0.3)',
+                color: status === 'online' ? iconColor : 'rgba(255, 255, 255, 0.3)',
               }}
             />
           </div>
@@ -146,6 +154,13 @@ function ConnectedAgentCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
+            {/* Color indicator dot */}
+            {hasCustomColor && (
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: agent.color }}
+              />
+            )}
             <p className="truncate text-sm font-medium text-white">{agent.name}</p>
             <span
               className={cn(
@@ -162,14 +177,16 @@ function ConnectedAgentCard({
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-medium"
               style={{
-                backgroundColor:
-                  methodCfg.color === 'emerald'
+                backgroundColor: hasCustomColor
+                  ? `${agent.color}26`
+                  : methodCfg.color === 'emerald'
                     ? 'rgba(16, 185, 129, 0.15)'
                     : methodCfg.color === 'blue'
                       ? 'rgba(59, 130, 246, 0.15)'
                       : 'rgba(245, 158, 11, 0.15)',
-                color:
-                  methodCfg.color === 'emerald'
+                color: hasCustomColor
+                  ? agent.color
+                  : methodCfg.color === 'emerald'
                     ? 'rgb(16, 185, 129)'
                     : methodCfg.color === 'blue'
                       ? 'rgb(59, 130, 246)'
@@ -187,19 +204,28 @@ function ConnectedAgentCard({
           </div>
         </div>
 
-        <button
-          onClick={onDisconnect}
-          disabled={isOnlyAgent}
-          className={cn(
-            'shrink-0 rounded-lg p-2 transition-all',
-            isOnlyAgent
-              ? 'cursor-not-allowed text-white/10'
-              : 'text-white/30 hover:bg-red-500/10 hover:text-red-400'
-          )}
-          title={isOnlyAgent ? 'Cannot disconnect only agent' : 'Disconnect'}
-        >
-          <WifiOff className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 gap-1">
+          <button
+            onClick={onEdit}
+            className="rounded-lg p-2 text-white/30 transition-all hover:bg-white/10 hover:text-white"
+            title="Edit machine"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onDisconnect}
+            disabled={isOnlyAgent}
+            className={cn(
+              'rounded-lg p-2 transition-all',
+              isOnlyAgent
+                ? 'cursor-not-allowed text-white/10'
+                : 'text-white/30 hover:bg-red-500/10 hover:text-red-400'
+            )}
+            title={isOnlyAgent ? 'Cannot disconnect only agent' : 'Disconnect'}
+          >
+            <WifiOff className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </motion.div>
   );
@@ -543,8 +569,10 @@ export function UnifiedAgentManager({
   sessionCounts,
   onDisconnectAgent,
   onConnectNewAgent,
+  onEditAgent,
 }: UnifiedAgentManagerProps) {
   const [view, setView] = useState<ViewState>('main');
+  const [editingAgent, setEditingAgent] = useState<StoredAgentConnection | null>(null);
 
   const handleNewConnection = (connection: Omit<StoredAgentConnection, 'id' | 'createdAt'>) => {
     onConnectNewAgent(connection);
@@ -628,6 +656,7 @@ export function UnifiedAgentManager({
                                 status={agentStatuses.get(agent.id) || 'connecting'}
                                 sessionCount={sessionCounts.get(agent.id) || 0}
                                 onDisconnect={() => onDisconnectAgent(agent.id)}
+                                onEdit={() => setEditingAgent(agent)}
                                 isOnlyAgent={connectedAgents.length === 1}
                               />
                             ))}
@@ -688,6 +717,19 @@ export function UnifiedAgentManager({
           </motion.div>
         </>
       )}
+
+      {/* Edit Agent Modal */}
+      <EditAgentModal
+        open={!!editingAgent}
+        onClose={() => setEditingAgent(null)}
+        agentId={editingAgent?.id || ''}
+        agentName={editingAgent?.name || ''}
+        agentColor={editingAgent?.color}
+        onSave={async (id, data) => {
+          await onEditAgent(id, data);
+          setEditingAgent(null);
+        }}
+      />
     </AnimatePresence>
   );
 }

@@ -28,6 +28,7 @@ function connectionToMachine(connection: StoredAgentConnection): LocalMachine {
     id: connection.id,
     name: connection.name,
     status: 'online',
+    color: connection.color,
     config: {
       projects: [],
       agentUrl: connection.url,
@@ -50,6 +51,7 @@ export function useHomeState() {
     loading: connectionsLoading,
     addConnection,
     removeConnection,
+    updateConnection,
   } = useAgentConnections();
 
   const [connectionModalOpen, setConnectionModalOpen] = useState(false);
@@ -278,6 +280,19 @@ export function useHomeState() {
     clearSessionFromUrl();
   }, [agentConnections, removeConnection, clearSessionFromUrl]);
 
+  // Edit an existing connection (name, color, etc.)
+  const handleConnectionEdited = useCallback(
+    async (connectionId: string, data: { name?: string; color?: string }) => {
+      try {
+        await updateConnection(connectionId, data);
+      } catch (error) {
+        console.error('Failed to update connection:', error);
+        throw error;
+      }
+    },
+    [updateConnection]
+  );
+
   const getAgentUrl = useCallback(() => {
     if (!selectedSession) return '';
     const connection = agentConnections.find((c) => c.id === selectedSession.machineId);
@@ -327,6 +342,7 @@ export function useHomeState() {
     handleSessionArchived,
     handleConnectionSaved,
     handleConnectionRemoved, // NEW: remove specific connection
+    handleConnectionEdited, // NEW: edit connection (name, color)
     handleConnectionCleared,
     clearSessionFromUrl,
   };

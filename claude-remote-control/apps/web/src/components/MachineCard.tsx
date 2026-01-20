@@ -9,6 +9,7 @@ interface Machine {
   id: string;
   name: string;
   status: string;
+  color?: string;
   config?: {
     projects: string[];
     agentUrl?: string;
@@ -26,6 +27,7 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
   const sessions = getSessionsForMachine(machine.id);
   const isOnline = machine.status === 'online';
   const agentUrl = machine.config?.agentUrl || 'localhost:4678';
+  const hasCustomColor = !!machine.color;
 
   return (
     <motion.button
@@ -40,6 +42,11 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
           ? 'cursor-pointer border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.08] hover:shadow-xl hover:shadow-black/20'
           : 'cursor-not-allowed border-white/5 bg-white/[0.02] opacity-50'
       )}
+      style={
+        hasCustomColor && isOnline
+          ? { borderColor: `${machine.color}40` }
+          : undefined
+      }
     >
       {/* Top row: Icon + Name + Status */}
       <div className="flex items-start gap-4">
@@ -48,17 +55,37 @@ export function MachineCard({ machine, onClick }: MachineCardProps) {
           className={cn(
             'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl',
             'border',
-            isOnline
+            !hasCustomColor && isOnline
               ? 'border-white/10 bg-gradient-to-br from-white/10 to-white/5'
-              : 'border-white/5 bg-white/5'
+              : !hasCustomColor
+                ? 'border-white/5 bg-white/5'
+                : ''
           )}
+          style={
+            hasCustomColor
+              ? {
+                  backgroundColor: isOnline ? `${machine.color}26` : `${machine.color}10`,
+                  borderColor: isOnline ? `${machine.color}40` : `${machine.color}20`,
+                }
+              : undefined
+          }
         >
-          <Monitor className={cn('h-6 w-6', isOnline ? 'text-white/70' : 'text-white/30')} />
+          <Monitor
+            className={cn('h-6 w-6', !hasCustomColor && (isOnline ? 'text-white/70' : 'text-white/30'))}
+            style={hasCustomColor ? { color: isOnline ? machine.color : `${machine.color}60` } : undefined}
+          />
         </div>
 
         {/* Machine Info */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
+            {/* Custom color indicator */}
+            {hasCustomColor && (
+              <span
+                className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: machine.color }}
+              />
+            )}
             <span
               className={cn(
                 'truncate text-lg font-semibold',

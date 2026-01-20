@@ -40,6 +40,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         name: body.name,
         url: body.url,
         method: body.method,
+        color: body.color,
         updatedAt: new Date(),
       })
       .where(and(eq(agentConnection.id, id), eq(agentConnection.userId, user.id)))

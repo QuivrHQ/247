@@ -42,6 +42,7 @@ export interface StoredAgentConnection {
   createdAt: number;
   isCloud?: boolean;
   cloudAgentId?: string;
+  color?: string;
 }
 
 // Generate a unique ID for connections

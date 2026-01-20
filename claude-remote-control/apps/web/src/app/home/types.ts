@@ -2,6 +2,7 @@ export interface LocalMachine {
   id: string;
   name: string;
   status: 'online' | 'offline';
+  color?: string;
   config?: {
     projects: string[];
     agentUrl: string;

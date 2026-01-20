@@ -33,6 +33,7 @@ export interface ConnectedAgent {
   method: 'localhost' | 'tailscale' | 'custom' | 'cloud';
   status: 'online' | 'offline' | 'connecting';
   sessionCount?: number;
+  color?: string;
 }
 
 interface MultiAgentHeaderProps {
@@ -110,6 +111,7 @@ function AgentPill({
   const config = agentTypeConfig[agent.method];
   const status = statusConfig[agent.status];
   const Icon = config.icon;
+  const hasCustomColor = !!agent.color;
 
   return (
     <motion.div
@@ -127,6 +129,11 @@ function AgentPill({
             ? 'border-white/20 bg-white/10'
             : 'border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.06]'
         )}
+        style={
+          hasCustomColor && !isExpanded
+            ? { borderColor: `${agent.color}40` }
+            : undefined
+        }
       >
         {/* Status indicator */}
         <span className="relative flex h-2 w-2">
@@ -140,12 +147,21 @@ function AgentPill({
           <span className={cn('relative inline-flex h-2 w-2 rounded-full', status.color)} />
         </span>
 
+        {/* Custom color dot */}
+        {hasCustomColor && (
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: agent.color }}
+          />
+        )}
+
         {/* Agent icon */}
         <Icon
           className={cn(
             'h-3.5 w-3.5 transition-colors',
-            agent.status === 'online' ? 'text-white/70' : 'text-white/40'
+            !hasCustomColor && (agent.status === 'online' ? 'text-white/70' : 'text-white/40')
           )}
+          style={hasCustomColor ? { color: agent.status === 'online' ? agent.color : `${agent.color}80` } : undefined}
         />
 
         {/* Agent name */}
@@ -274,20 +290,28 @@ function AgentsCompactView({
     >
       {/* Stacked status indicators */}
       <div className="flex -space-x-1">
-        {agents.slice(0, 3).map((agent, i) => (
-          <span
-            key={agent.id}
-            className={cn(
-              'flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0a0a10]',
-              agent.status === 'online' ? 'bg-emerald-500' : 'bg-white/20'
-            )}
-            style={{ zIndex: 3 - i }}
-          >
-            {React.createElement(agentTypeConfig[agent.method].icon, {
-              className: 'h-2 w-2 text-white',
-            })}
-          </span>
-        ))}
+        {agents.slice(0, 3).map((agent, i) => {
+          const hasCustomColor = !!agent.color;
+          return (
+            <span
+              key={agent.id}
+              className={cn(
+                'flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0a0a10]',
+                !hasCustomColor && (agent.status === 'online' ? 'bg-emerald-500' : 'bg-white/20')
+              )}
+              style={{
+                zIndex: 3 - i,
+                ...(hasCustomColor
+                  ? { backgroundColor: agent.status === 'online' ? agent.color : `${agent.color}60` }
+                  : {}),
+              }}
+            >
+              {React.createElement(agentTypeConfig[agent.method].icon, {
+                className: 'h-2 w-2 text-white',
+              })}
+            </span>
+          );
+        })}
         {agents.length > 3 && (
           <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0a0a10] bg-white/10 text-[8px] font-bold text-white/60">
             +{agents.length - 3}
@@ -454,6 +478,28 @@ function AgentsPanel({
             const config = agentTypeConfig[agent.method];
             const status = statusConfig[agent.status];
             const Icon = config.icon;
+            const hasCustomColor = !!agent.color;
+
+            // Calculate icon colors based on custom color or method color
+            const iconBgColor = hasCustomColor
+              ? `${agent.color}26`
+              : config.color === 'emerald'
+                ? 'rgba(16, 185, 129, 0.15)'
+                : config.color === 'blue'
+                  ? 'rgba(59, 130, 246, 0.15)'
+                  : config.color === 'purple'
+                    ? 'rgba(168, 85, 247, 0.15)'
+                    : 'rgba(245, 158, 11, 0.15)';
+
+            const iconColor = hasCustomColor
+              ? agent.color
+              : config.color === 'emerald'
+                ? 'rgb(16, 185, 129)'
+                : config.color === 'blue'
+                  ? 'rgb(59, 130, 246)'
+                  : config.color === 'purple'
+                    ? 'rgb(168, 85, 247)'
+                    : 'rgb(245, 158, 11)';
 
             return (
               <motion.div
@@ -467,30 +513,12 @@ function AgentsPanel({
                 <div className="relative">
                   <div
                     className="flex h-9 w-9 items-center justify-center rounded-lg"
-                    style={{
-                      backgroundColor:
-                        config.color === 'emerald'
-                          ? 'rgba(16, 185, 129, 0.15)'
-                          : config.color === 'blue'
-                            ? 'rgba(59, 130, 246, 0.15)'
-                            : config.color === 'purple'
-                              ? 'rgba(168, 85, 247, 0.15)'
-                              : 'rgba(245, 158, 11, 0.15)',
-                    }}
+                    style={{ backgroundColor: iconBgColor }}
                   >
                     <Icon
                       className="h-4 w-4"
                       style={{
-                        color:
-                          agent.status === 'online'
-                            ? config.color === 'emerald'
-                              ? 'rgb(16, 185, 129)'
-                              : config.color === 'blue'
-                                ? 'rgb(59, 130, 246)'
-                                : config.color === 'purple'
-                                  ? 'rgb(168, 85, 247)'
-                                  : 'rgb(245, 158, 11)'
-                            : 'rgba(255, 255, 255, 0.3)',
+                        color: agent.status === 'online' ? iconColor : 'rgba(255, 255, 255, 0.3)',
                       }}
                     />
                   </div>
@@ -506,6 +534,13 @@ function AgentsPanel({
                 {/* Agent info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
+                    {/* Custom color indicator */}
+                    {hasCustomColor && (
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: agent.color }}
+                      />
+                    )}
                     <p className="truncate text-sm font-medium text-white/90">{agent.name}</p>
                     {agent.sessionCount !== undefined && agent.sessionCount > 0 && (
                       <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50">

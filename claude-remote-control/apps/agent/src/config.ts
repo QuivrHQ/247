@@ -79,4 +79,3 @@ export function loadConfig(): AgentConfig {
 }
 
 export const config = loadConfig();
-export default config;

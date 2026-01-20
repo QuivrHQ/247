@@ -129,27 +129,6 @@ export function addAgentConnection(
   return existingIndex >= 0 ? connections[existingIndex] : newConnection;
 }
 
-// Remove an agent connection by ID
-export function removeAgentConnection(id: string): void {
-  const connections = loadAgentConnections();
-  const filtered = connections.filter((c) => c.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-}
-
-// Update an existing agent connection
-export function updateAgentConnection(
-  id: string,
-  updates: Partial<Omit<StoredAgentConnection, 'id' | 'createdAt'>>
-): void {
-  const connections = loadAgentConnections();
-  const index = connections.findIndex((c) => c.id === id);
-
-  if (index >= 0) {
-    connections[index] = { ...connections[index], ...updates };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(connections));
-  }
-}
-
 // Clear all agent connections
 export function clearAllAgentConnections(): void {
   localStorage.removeItem(STORAGE_KEY);
@@ -176,15 +155,6 @@ export function saveAgentConnection(connection: AgentConnection): AgentConnectio
     method: connection.method,
   });
   return connection;
-}
-
-// Legacy function for backward compatibility
-export function clearAgentConnection(): void {
-  // Only clear if there's exactly one connection (legacy behavior)
-  const connections = loadAgentConnections();
-  if (connections.length === 1) {
-    clearAllAgentConnections();
-  }
 }
 
 interface AgentConnectionSettingsProps {

@@ -108,20 +108,6 @@ CREATE INDEX IF NOT EXISTS idx_sessions_last_activity ON sessions(last_activity)
 `;
 
 // ============================================================================
-// Migration for v17 (Add status tracking via hooks)
-// ============================================================================
-
-export const MIGRATION_17 = `
--- Migration v17: Add status tracking columns for hook-based notifications
-ALTER TABLE sessions ADD COLUMN status TEXT;
-ALTER TABLE sessions ADD COLUMN status_source TEXT;
-ALTER TABLE sessions ADD COLUMN attention_reason TEXT;
-ALTER TABLE sessions ADD COLUMN last_status_change INTEGER;
-
-CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
-`;
-
-// ============================================================================
 // Retention Configuration
 // ============================================================================
 

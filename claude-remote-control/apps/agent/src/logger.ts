@@ -47,5 +47,3 @@ export const logger = {
   // Hook status logs
   hooks: baseLogger.child({ module: 'Hooks' }),
 };
-
-export default logger;

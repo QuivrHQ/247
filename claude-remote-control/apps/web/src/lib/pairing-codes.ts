@@ -66,32 +66,3 @@ export function lookupPairingCode(code: string): PairingCodeInfo | null {
 
   return data;
 }
-
-/**
- * Consume a pairing code - returns info and removes it (single-use)
- */
-export function consumePairingCode(code: string): PairingCodeInfo | null {
-  const data = lookupPairingCode(code);
-
-  if (data) {
-    pairingCodes.delete(code);
-  }
-
-  return data;
-}
-
-/**
- * Get all active pairing codes (for debugging)
- */
-export function getActivePairingCodes(): PairingCodeInfo[] {
-  const now = Date.now();
-  const active: PairingCodeInfo[] = [];
-
-  for (const data of pairingCodes.values()) {
-    if (data.expiresAt > now) {
-      active.push(data);
-    }
-  }
-
-  return active;
-}

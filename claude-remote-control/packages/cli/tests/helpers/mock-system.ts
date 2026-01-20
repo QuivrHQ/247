@@ -23,13 +23,6 @@ export interface CapturedOutput {
   warns: string[];
 }
 
-export interface MockSystemState {
-  fs: MockFsState;
-  runningPids: Set<number>;
-  output: CapturedOutput;
-  promptResponses: unknown[];
-}
-
 // ============= MOCK PATHS =============
 
 export const mockPaths = {
@@ -55,25 +48,12 @@ export const validConfig = {
   projects: { basePath: '~/Dev', whitelist: [] },
 };
 
-export function createConfig(overrides?: Partial<typeof validConfig>) {
-  return { ...validConfig, ...overrides };
-}
-
 // ============= FACTORY FUNCTIONS =============
 
 export function createMockFsState(): MockFsState {
   return {
     files: new Map(),
     directories: new Set(),
-  };
-}
-
-export function createMockSystem(): MockSystemState {
-  return {
-    fs: createMockFsState(),
-    runningPids: new Set(),
-    output: { logs: [], errors: [], warns: [] },
-    promptResponses: [],
   };
 }
 
@@ -86,48 +66,6 @@ export function createMockChild(options: { pid?: number } = {}): MockChildProces
 }
 
 // ============= MOCK IMPLEMENTATIONS =============
-
-export function createFsMock(state: MockFsState) {
-  return {
-    existsSync: vi.fn((path: string) => state.files.has(path) || state.directories.has(path)),
-    readFileSync: vi.fn((path: string) => {
-      const content = state.files.get(path);
-      if (content === undefined) {
-        const err = new Error(`ENOENT: no such file or directory, open '${path}'`);
-        (err as NodeJS.ErrnoException).code = 'ENOENT';
-        throw err;
-      }
-      return content;
-    }),
-    writeFileSync: vi.fn((path: string, content: string) => {
-      state.files.set(path, content);
-    }),
-    mkdirSync: vi.fn((path: string, options?: { recursive?: boolean }) => {
-      state.directories.add(path);
-      if (options?.recursive) {
-        // Add parent directories
-        const parts = path.split('/');
-        for (let i = 1; i < parts.length; i++) {
-          state.directories.add(parts.slice(0, i + 1).join('/'));
-        }
-      }
-    }),
-    unlinkSync: vi.fn((path: string) => {
-      state.files.delete(path);
-    }),
-    readdirSync: vi.fn(() => []),
-    lstatSync: vi.fn(() => ({ isSymbolicLink: () => false })),
-    rmSync: vi.fn(),
-    copyFileSync: vi.fn((src: string, dest: string) => {
-      const content = state.files.get(src);
-      if (content !== undefined) {
-        state.files.set(dest, content);
-      }
-    }),
-    symlinkSync: vi.fn(),
-    openSync: vi.fn(() => 3), // Fake file descriptor
-  };
-}
 
 export function createProcessKillMock(runningPids: Set<number>) {
   return vi.fn((pid: number, signal?: string | number) => {
@@ -146,25 +84,6 @@ export function createProcessKillMock(runningPids: Set<number>) {
     }
     return true;
   });
-}
-
-export function createOraMock() {
-  const spinnerMock = {
-    start: vi.fn().mockReturnThis(),
-    stop: vi.fn().mockReturnThis(),
-    succeed: vi.fn().mockReturnThis(),
-    fail: vi.fn().mockReturnThis(),
-    warn: vi.fn().mockReturnThis(),
-    info: vi.fn().mockReturnThis(),
-    text: '',
-  };
-  return vi.fn(() => spinnerMock);
-}
-
-export function createEnquirerMock(responses: unknown[]) {
-  return {
-    prompt: vi.fn(() => Promise.resolve(responses.shift())),
-  };
 }
 
 // ============= CONSOLE CAPTURE =============

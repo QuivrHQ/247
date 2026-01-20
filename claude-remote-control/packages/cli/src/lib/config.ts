@@ -198,10 +198,3 @@ export function configExists(profileName?: string | null): boolean {
   const configPath = getProfilePath(profileName);
   return existsSync(configPath);
 }
-
-/**
- * Get default configuration
- */
-export function getDefaultConfig(): AgentConfig {
-  return { ...DEFAULT_CONFIG };
-}

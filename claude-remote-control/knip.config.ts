@@ -2,35 +2,41 @@ import type { KnipConfig } from 'knip';
 
 const config: KnipConfig = {
   workspaces: {
+    '.': {
+      entry: ['tests/**/*.test.ts'],
+      project: ['tests/**/*.ts'],
+    },
     'apps/agent': {
-      entry: ['src/server.ts'],
-      project: ['src/**/*.ts'],
+      entry: ['src/server.ts', 'tests/**/*.test.ts'],
+      project: ['src/**/*.ts', 'tests/**/*.ts'],
       // pino-pretty: Used at runtime via dynamic require
       // http-proxy, web-push: Used in routes
-      // Test deps: supertest, execa, @types/*
       ignoreDependencies: [
         'pino-pretty',
         'http-proxy',
         'web-push',
-        'supertest',
         'execa',
         '@types/http-proxy',
-        '@types/supertest',
         '@types/web-push',
       ],
     },
     'apps/web': {
-      entry: ['src/app/**/page.tsx', 'src/app/**/layout.tsx', 'src/app/**/route.ts'],
-      project: ['src/**/*.{ts,tsx}'],
+      entry: [
+        'src/app/**/page.tsx',
+        'src/app/**/layout.tsx',
+        'src/app/**/route.ts',
+        'tests/**/*.test.ts',
+        'tests/setup.ts',
+      ],
+      project: ['src/**/*.{ts,tsx}', 'tests/**/*.ts'],
       next: true,
-      // Test deps
-      ignoreDependencies: ['@testing-library/dom', '@testing-library/react'],
     },
     'packages/shared': {
       project: ['src/**/*.ts'],
     },
     'packages/cli': {
-      project: ['src/**/*.ts'],
+      entry: ['tests/**/*.test.ts'],
+      project: ['src/**/*.ts', 'tests/**/*.ts'],
       // Agent dependencies bundled into CLI
       ignoreDependencies: [
         'express',
@@ -46,12 +52,16 @@ const config: KnipConfig = {
       ],
     },
   },
-  ignore: ['**/*.test.ts', '**/*.spec.ts', 'tests/**', 'vitest.workspace.ts'],
+  ignore: ['vitest.workspace.ts'],
   ignoreExportsUsedInFile: true,
   // Root-level dev dependencies that are tooling
   ignoreDependencies: ['husky', 'lint-staged', '@vitest/coverage-v8'],
   // Disable vitest plugin at root - each workspace has its own vitest config
   vitest: false,
+  // Ignore intentional duplicate exports (aliases like checkNode = checkNodeVersion)
+  rules: {
+    duplicates: 'off',
+  },
 };
 
 export default config;

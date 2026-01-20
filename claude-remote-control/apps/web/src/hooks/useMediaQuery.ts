@@ -40,66 +40,9 @@ export const BREAKPOINTS = {
   '2xl': 1536,
 } as const;
 
-export type Breakpoint = keyof typeof BREAKPOINTS;
-
 /**
  * Hook to detect if the viewport is mobile-sized (< 768px)
  */
 export function useIsMobile(): boolean {
   return useMediaQuery(`(max-width: ${BREAKPOINTS.md - 1}px)`);
-}
-
-/**
- * Hook to detect if the viewport is tablet-sized (< 1024px)
- */
-export function useIsTablet(): boolean {
-  return useMediaQuery(`(max-width: ${BREAKPOINTS.lg - 1}px)`);
-}
-
-/**
- * Hook to detect if the viewport is desktop-sized (>= 1024px)
- */
-export function useIsDesktop(): boolean {
-  return useMediaQuery(`(min-width: ${BREAKPOINTS.lg}px)`);
-}
-
-/**
- * Hook to detect touch device capability
- */
-export function useIsTouchDevice(): boolean {
-  return useMediaQuery('(pointer: coarse)');
-}
-
-/**
- * Hook to detect reduced motion preference
- */
-export function usePrefersReducedMotion(): boolean {
-  return useMediaQuery('(prefers-reduced-motion: reduce)');
-}
-
-/**
- * Combined responsive state hook
- */
-export interface ResponsiveState {
-  isMobile: boolean;
-  isTablet: boolean;
-  isDesktop: boolean;
-  isTouchDevice: boolean;
-  prefersReducedMotion: boolean;
-}
-
-export function useResponsive(): ResponsiveState {
-  const isMobile = useIsMobile();
-  const isTablet = useIsTablet();
-  const isDesktop = useIsDesktop();
-  const isTouchDevice = useIsTouchDevice();
-  const prefersReducedMotion = usePrefersReducedMotion();
-
-  return {
-    isMobile,
-    isTablet,
-    isDesktop,
-    isTouchDevice,
-    prefersReducedMotion,
-  };
 }

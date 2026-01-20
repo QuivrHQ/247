@@ -1,8 +1,7 @@
 /**
  * AgentConnectionSettings Tests
  *
- * Tests for agent connection management including localStorage persistence
- * and disconnect functionality.
+ * Tests for agent connection management including localStorage persistence.
  *
  * Note: The storage format changed to support multiple agents:
  * - Old: 'agentConnection' key with single AgentConnection object
@@ -14,8 +13,6 @@ import {
   loadAgentConnections,
   saveAgentConnection,
   addAgentConnection,
-  removeAgentConnection,
-  clearAgentConnection,
   clearAllAgentConnections,
   type AgentConnection,
   type StoredAgentConnection,
@@ -177,50 +174,6 @@ describe('AgentConnectionSettings', () => {
     });
   });
 
-  describe('removeAgentConnection', () => {
-    it('removes connection by id', () => {
-      const conn = addAgentConnection({
-        url: 'localhost:4678',
-        name: 'Test',
-        method: 'localhost',
-      });
-
-      expect(loadAgentConnections()).toHaveLength(1);
-
-      removeAgentConnection(conn.id);
-
-      expect(loadAgentConnections()).toHaveLength(0);
-    });
-  });
-
-  describe('clearAgentConnection (legacy)', () => {
-    it('clears when only one connection exists', () => {
-      saveAgentConnection({
-        url: 'localhost:4678',
-        method: 'localhost',
-      });
-
-      clearAgentConnection();
-
-      expect(loadAgentConnection()).toBeNull();
-    });
-
-    it('does not clear when multiple connections exist', () => {
-      addAgentConnection({ url: 'localhost:4678', name: 'A', method: 'localhost' });
-      addAgentConnection({ url: 'remote.example.com', name: 'B', method: 'custom' });
-
-      clearAgentConnection();
-
-      // Should still have connections (legacy clear only works with 1 connection)
-      expect(loadAgentConnections()).toHaveLength(2);
-    });
-
-    it('does nothing when no connection exists', () => {
-      expect(() => clearAgentConnection()).not.toThrow();
-      expect(loadAgentConnection()).toBeNull();
-    });
-  });
-
   describe('clearAllAgentConnections', () => {
     it('removes all connections', () => {
       addAgentConnection({ url: 'localhost:4678', name: 'A', method: 'localhost' });
@@ -232,8 +185,8 @@ describe('AgentConnectionSettings', () => {
     });
   });
 
-  describe('disconnect flow', () => {
-    it('full connect then disconnect cycle works correctly', () => {
+  describe('connect flow', () => {
+    it('full connect cycle works correctly', () => {
       // Initially no connection
       expect(loadAgentConnection()).toBeNull();
 
@@ -246,8 +199,8 @@ describe('AgentConnectionSettings', () => {
       saveAgentConnection(connection);
       expect(loadAgentConnection()).toEqual(connection);
 
-      // Clear the connection (disconnect) - works for single connection
-      clearAgentConnection();
+      // Clear all connections
+      clearAllAgentConnections();
       expect(loadAgentConnection()).toBeNull();
 
       // Can save a new connection after clearing

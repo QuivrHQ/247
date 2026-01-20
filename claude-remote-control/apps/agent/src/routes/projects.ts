@@ -6,13 +6,6 @@ import { Router } from 'express';
 import { spawn } from 'child_process';
 import { config } from '../config.js';
 
-// Helper to check if project is allowed (whitelist empty = allow any)
-export function isProjectAllowed(project: string): boolean {
-  const whitelist = config.projects.whitelist as string[];
-  const hasWhitelist = whitelist && whitelist.length > 0;
-  return hasWhitelist ? whitelist.includes(project) : true;
-}
-
 export function createProjectRoutes(): Router {
   const router = Router();
 

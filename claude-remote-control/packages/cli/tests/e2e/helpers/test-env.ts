@@ -169,27 +169,6 @@ export function checkNodeVersion(): boolean {
 }
 
 /**
- * Wait for a condition to be true
- */
-export async function waitFor(
-  condition: () => boolean | Promise<boolean>,
-  options: { timeout?: number; interval?: number } = {}
-): Promise<boolean> {
-  const timeout = options.timeout ?? 5000;
-  const interval = options.interval ?? 100;
-  const start = Date.now();
-
-  while (Date.now() - start < timeout) {
-    if (await condition()) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, interval));
-  }
-
-  return false;
-}
-
-/**
  * Get a free port for testing
  */
 export async function getFreePort(): Promise<number> {

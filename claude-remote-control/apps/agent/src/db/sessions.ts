@@ -33,16 +33,6 @@ export function getArchivedSessions(): DbSession[] {
 }
 
 /**
- * Get sessions by project
- */
-export function getSessionsByProject(project: string): DbSession[] {
-  const db = getDatabase();
-  return db
-    .prepare('SELECT * FROM sessions WHERE project = ? ORDER BY last_activity DESC')
-    .all(project) as DbSession[];
-}
-
-/**
  * Upsert a session (insert or update)
  */
 export function upsertSession(name: string, input: UpsertSessionInput): DbSession {
@@ -130,42 +120,6 @@ export function archiveSession(name: string): DbSession | null {
 
   console.log(`[DB] Archived session: ${name}`);
   return getSession(name);
-}
-
-/**
- * Cleanup stale sessions (older than maxAge)
- * - Non-archived sessions: delete if last_activity older than maxAge
- * - Archived sessions: delete if archived_at older than archivedMaxAge
- * Returns number of deleted sessions
- */
-export function cleanupStaleSessions(maxAge: number, archivedMaxAge?: number): number {
-  const db = getDatabase();
-  const now = Date.now();
-  const cutoff = now - maxAge;
-
-  // Delete stale non-archived sessions
-  const activeResult = db
-    .prepare('DELETE FROM sessions WHERE archived_at IS NULL AND last_activity < ?')
-    .run(cutoff);
-
-  let archivedDeleted = 0;
-  if (archivedMaxAge) {
-    const archivedCutoff = now - archivedMaxAge;
-    const archivedResult = db
-      .prepare('DELETE FROM sessions WHERE archived_at IS NOT NULL AND archived_at < ?')
-      .run(archivedCutoff);
-    archivedDeleted = archivedResult.changes;
-  }
-
-  const totalDeleted = activeResult.changes + archivedDeleted;
-
-  if (totalDeleted > 0) {
-    console.log(
-      `[DB] Cleaned up ${activeResult.changes} stale sessions, ${archivedDeleted} old archived sessions`
-    );
-  }
-
-  return totalDeleted;
 }
 
 /**

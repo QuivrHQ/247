@@ -123,23 +123,32 @@ export function usePushNotifications() {
       const { publicKey } = await vapidResponse.json();
       console.log('[Push] Got VAPID key');
 
-      // Wait for service worker with timeout
-      console.log('[Push] Waiting for service worker...');
+      // Wait for service worker with timeout (15s for iOS)
+      console.log('[Push] Waiting for service worker...', Date.now());
       const swReadyPromise = navigator.serviceWorker.ready;
-      const timeoutPromise = new Promise<never>((_, reject) =>
+      const swTimeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error('Service worker timeout - try refreshing the page')),
-          10000
+          15000 // 15 seconds for iOS
         )
       );
-      const registration = await Promise.race([swReadyPromise, timeoutPromise]);
-      console.log('[Push] Service worker ready');
-      console.log('[Push] Subscribing to push manager...');
-      const subscription = await registration.pushManager.subscribe({
+      const registration = await Promise.race([swReadyPromise, swTimeoutPromise]);
+      console.log('[Push] Service worker ready', Date.now());
+
+      // Subscribe to push manager with timeout (20s - iOS can be slow)
+      console.log('[Push] Subscribing to push manager...', Date.now());
+      const subscribePromise = registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
-      console.log('[Push] Subscribed to push manager');
+      const subscribeTimeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Push subscription timeout - please try again')),
+          20000 // 20 seconds timeout
+        )
+      );
+      const subscription = await Promise.race([subscribePromise, subscribeTimeoutPromise]);
+      console.log('[Push] Subscribed to push manager', Date.now());
 
       // Send subscription to server
       const response = await fetch('/api/push/subscribe', {
